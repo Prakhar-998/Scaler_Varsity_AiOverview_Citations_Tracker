@@ -1,0 +1,65 @@
+"""Build sheet rows from decisions and checks, and compute the summary."""
+from __future__ import annotations
+
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional
+
+from tracker.checks.base import STATUS_FAILED, STATUS_NO_AIO, STATUS_OK, SerpResult
+from tracker.match import CitationMatch
+
+PROMPT_HEADERS = ["prompt", "cluster", "intent", "score", "status", "reason", "source inputs"]
+CHECK_HEADERS = ["date", "time", "prompt", "cluster", "ai overview shown", "varsity cited", "cited url",
+                 "position", "brand cited", "organic rank", "competing domains", "check status", "error"]
+SUMMARY_HEADERS = ["cluster", "checks", "ok", "no_aio", "failed", "ai overview presence %",
+                   "varsity citation rate %", "brand citation rate %"]
+
+
+def prompt_row(d) -> List:
+    c = d.candidate
+    return [c.prompt, c.cluster, c.intent, d.score, d.status, d.reason, "; ".join(d.sources)]
+
+
+def _yn(v: bool) -> str:
+    return "yes" if v else "no"
+
+
+def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: Optional[CitationMatch]) -> List:
+    m = m or CitationMatch()
+    shown = result.status == STATUS_OK and result.shown
+    return [
+        when.strftime("%Y-%m-%d"), when.strftime("%H:%M"), prompt, cluster,
+        _yn(shown) if result.status != STATUS_FAILED else "",
+        _yn(m.varsity_cited) if shown else "",
+        m.cited_url, m.position or "", _yn(m.brand_cited) if shown else "",
+        m.organic_rank or "", ", ".join(m.competing_domains[:10]),
+        result.status, result.error or ("aio had no references" if result.incomplete else ""),
+    ]
+
+
+def _pct(n: int, d: int) -> str:
+    return f"{100 * n / d:.1f}" if d else ""
+
+
+def summarise(check_rows: List[List]) -> List[List]:
+    """Presence % = AIO shown / successful checks. Citation rate % = Varsity cited / AIO shown.
+    Failed checks are counted but excluded from both denominators."""
+    idx = {h: i for i, h in enumerate(CHECK_HEADERS)}
+    stats: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for row in check_rows:
+        for key in (row[idx["cluster"]], "ALL"):
+            s = stats[key]
+            s["checks"] += 1
+            status = row[idx["check status"]]
+            s[status] += 1
+            if status == STATUS_OK:
+                s["varsity"] += row[idx["varsity cited"]] == "yes"
+                s["brand"] += row[idx["brand cited"]] == "yes"
+    out = []
+    for key in sorted(stats, key=lambda k: (k == "ALL", k)):
+        s = stats[key]
+        ok, no_aio = s[STATUS_OK], s[STATUS_NO_AIO]
+        out.append([key, s["checks"], ok, no_aio, s[STATUS_FAILED],
+                    _pct(ok, ok + no_aio), _pct(s["varsity"], ok), _pct(s["brand"], ok)])
+    return out
