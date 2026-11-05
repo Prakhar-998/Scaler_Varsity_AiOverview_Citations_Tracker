@@ -1,0 +1,17 @@
+CLAUDE.md
+
+# Secrets
+.env
+*.json.key
+service_account*.json
+credentials*.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Run artefacts
+runs/
+data/private/
