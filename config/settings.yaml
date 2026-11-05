@@ -1,0 +1,9 @@
+# Cost guard: hard cap on SERP calls in one run (retries count).
+max_serp_calls: 300
+# Prompt layer
+candidates_per_blog: 4
+keep_top: 50
+gsc_match_threshold: 85   # rapidfuzz token_set_ratio to count as a GSC match
+dedupe_threshold: 90      # candidates at or above this similarity are near-duplicates
+probe_unmatched: true     # spend one SERP call on candidates with no GSC match
+gemini_model: gemini-2.5-flash

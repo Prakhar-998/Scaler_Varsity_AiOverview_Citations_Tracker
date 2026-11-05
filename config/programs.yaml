@@ -1,0 +1,14 @@
+# Programs and clusters for the prototype. Only `active: true` clusters get prompts.
+# match_terms assign blogs and GSC queries to a cluster (case-insensitive substring).
+# Placeholder: confirm program names, terms and weights with the program team.
+clusters:
+  - key: fde
+    name: Forward Deployed Engineer
+    active: true
+    weight: 1.0
+    match_terms: ["forward deployed", "fde", "solutions engineer"]
+  - key: genai
+    name: Generative AI
+    active: true
+    weight: 1.0
+    match_terms: ["generative ai", "genai", "gen ai", "llm", "prompt engineering", "agentic ai", "ai engineer"]
