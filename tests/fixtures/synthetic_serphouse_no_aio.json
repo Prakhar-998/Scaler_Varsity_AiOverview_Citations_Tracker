@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "results": {
+    "results": {
+      "organic": [
+        {"position": 1, "title": "Some page", "link": "https://www.example.com/a"}
+      ]
+    }
+  }
+}
