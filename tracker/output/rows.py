@@ -12,8 +12,8 @@ from tracker.match import CitationMatch
 PROMPT_HEADERS = ["prompt", "cluster", "intent", "score", "status", "reason", "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "competing domains", "check status", "error"]
-SUMMARY_HEADERS = ["cluster", "checks", "ok", "no_aio", "failed", "ai overview presence %",
-                   "varsity citation rate %", "brand citation rate %"]
+SUMMARY_HEADERS = ["cluster", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
+                   "varsity citation rate %", "incomplete rate %", "brand citation rate %"]
 
 
 def prompt_row(d) -> List:
@@ -44,8 +44,13 @@ def _pct(n: int, d: int) -> str:
 
 
 def summarise(check_rows: List[List]) -> List[List]:
-    """Presence % = AIO shown / successful checks. Citation rate % = Varsity cited / AIO shown.
-    Failed checks are counted but excluded from both denominators."""
+    """Rates per cluster, plus an ALL row.
+
+    AI Overview presence % = AIO detected (ok + incomplete) / (ok + incomplete + no_aio)
+    Varsity citation rate % = Varsity cited / ok        (incomplete: sources unknown)
+    Incomplete rate %       = incomplete / AIO detected
+    Failed checks are counted but kept out of every denominator.
+    """
     idx = {h: i for i, h in enumerate(CHECK_HEADERS)}
     stats: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for row in check_rows:
@@ -60,7 +65,9 @@ def summarise(check_rows: List[List]) -> List[List]:
     out = []
     for key in sorted(stats, key=lambda k: (k == "ALL", k)):
         s = stats[key]
-        ok, no_aio = s[STATUS_OK], s[STATUS_NO_AIO]
-        out.append([key, s["checks"], ok, no_aio, s[STATUS_FAILED],
-                    _pct(ok, ok + no_aio), _pct(s["varsity"], ok), _pct(s["brand"], ok)])
+        ok, inc, no_aio = s[STATUS_OK], s[STATUS_INCOMPLETE], s[STATUS_NO_AIO]
+        detected = ok + inc
+        out.append([key, s["checks"], ok, inc, no_aio, s[STATUS_FAILED],
+                    _pct(detected, detected + no_aio), _pct(s["varsity"], ok),
+                    _pct(inc, detected), _pct(s["brand"], ok)])
     return out

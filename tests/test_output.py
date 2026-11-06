@@ -3,7 +3,7 @@ from datetime import datetime
 
 from tracker.checks.base import Reference, SerpResult, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
 from tracker.match import match_citations
-from tracker.output import CHECK_HEADERS, CsvWriter, check_row, summarise
+from tracker.output import CHECK_HEADERS, SUMMARY_HEADERS, CsvWriter, check_row, summarise
 
 WHEN = datetime(2026, 11, 5, 9, 30)
 V = "https://www.interviewbit.com/varsity/blog/x/"
@@ -42,10 +42,26 @@ def test_summary_excludes_failed_from_rates():
         row("genai", SerpResult.failed("d", "x")),
         row("fde", SerpResult("e", STATUS_NO_AIO)),
     ]
-    s = {r[0]: r for r in summarise(rows)}
-    assert s["genai"] == ["genai", 4, 2, 1, 1, "66.7", "50.0", "0.0"]
-    assert s["fde"][5] == "0.0" and s["fde"][6] == ""
-    assert summarise(rows)[-1][0] == "ALL" and s["ALL"][1] == 5
+    s = {r[0]: dict(zip(SUMMARY_HEADERS, r)) for r in summarise(rows)}
+    g = s["genai"]
+    assert (g["checks"], g["ok"], g["no_aio"], g["failed"]) == (4, 2, 1, 1)
+    assert g["ai overview presence %"] == "66.7" and g["varsity citation rate %"] == "50.0"
+    assert s["fde"]["ai overview presence %"] == "0.0" and s["fde"]["varsity citation rate %"] == ""
+    assert summarise(rows)[-1][0] == "ALL" and s["ALL"]["checks"] == 5
+
+
+def test_summary_leaves_incomplete_out_of_citation_rate():
+    rows = [
+        row("fde", SerpResult("a", STATUS_OK, shown=True, references=[Reference(V, position=1)])),
+        row("fde", SerpResult("b", STATUS_INCOMPLETE, shown=True)),
+        row("fde", SerpResult("c", STATUS_INCOMPLETE, shown=True)),
+        row("fde", SerpResult("d", STATUS_NO_AIO)),
+    ]
+    f = dict(zip(SUMMARY_HEADERS, summarise(rows)[0]))
+    assert f["incomplete"] == 2
+    assert f["varsity citation rate %"] == "100.0"  # 1 cited / 1 ok; incomplete not in denominator
+    assert f["ai overview presence %"] == "75.0"    # 3 AIOs detected / 4 successful checks
+    assert f["incomplete rate %"] == "66.7"         # 2 incomplete / 3 AIOs detected
 
 
 def test_csv_writer_appends(tmp_path):
