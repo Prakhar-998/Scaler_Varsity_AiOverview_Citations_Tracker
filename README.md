@@ -25,9 +25,14 @@ blogs.csv + gsc.csv + config/programs.yaml
         ── appends to the Checks tab, rebuilds the Summary tab
 ```
 
-Run `check` twice a day at different times. A **no_aio** check (the SERP loaded but showed no AI
-Overview) is recorded separately from a **failed** check, and failed checks are left out of
-every rate.
+Run `check` twice a day at different times. Each check gets one status:
+
+| Status | Meaning | In citation rate? |
+|---|---|---|
+| `ok` | AI Overview shown, sources parsed | yes |
+| `incomplete` | AI Overview shown, but its sources loaded too late to capture (retried once) | no |
+| `no_aio` | SERP loaded, no AI Overview | n/a |
+| `failed` | request or parse failed | no (left out of every rate) |
 
 ## Setup
 
@@ -72,14 +77,15 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 |---|---|
 | Prompts | prompt, cluster, intent, score, status (active/dropped), reason, source inputs |
 | Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, competing domains, check status, error |
-| Summary | per cluster and ALL: checks, ok, no_aio, failed, AI Overview presence %, Varsity citation rate %, brand citation rate % |
+| Summary | per cluster and ALL: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
 
-Sample `Checks` rows (illustrative, built from the synthetic test fixture):
+Sample `Checks` rows, built from the real SERPHouse fixtures:
 
 ```
 date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,brand cited,organic rank,competing domains,check status,error
-2026-11-05,09:30,best full stack developer course in india,fde,yes,yes,https://www.interviewbit.com/varsity/blog/best-full-stack-developer-courses/?utm_source=x,1,yes,2,example-edu.com,ok,
-2026-11-05,09:31,is generative ai course worth it,genai,no,,,,,,,no_aio,
+2026-11-06,17:12,what is a forward deployed engineer,fde,yes,no,,,no,,"linkedin.com, iit.edu, posthog.com, roadmap.sh, nareshit.com",ok,
+2026-11-06,17:08,forward deployed engineer salary in india,fde,yes,,,,,,,incomplete,AI Overview sources did not load
+2026-11-05,18:19,best forward deployed engineer course in india,fde,no,,,,,,,no_aio,
 ```
 
 ## Tests
@@ -88,8 +94,8 @@ date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,bran
 .venv/bin/pytest
 ```
 
-All tests run offline, using fake providers and fake HTTP sessions. Fixtures in `tests/fixtures/`
-are synthetic until real SERPHouse responses are captured (see the README in that folder).
+All tests run offline, using fake providers and fake HTTP sessions. The SERPHouse tests use real
+captured responses in `tests/fixtures/serphouse/` (see the README in that folder).
 
 ## Layout
 

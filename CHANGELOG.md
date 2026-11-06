@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Fixed
+- SERPHouse requests now always send `tbs: ""`. SERPHouse added Google Verbatim (`tbs=li:1`) by
+  default, which suppressed AI Overviews.
+- SERPHouse requests use `POST /serp/live` with a JSON `{"data": {...}}` body. The GET `gl`/`hl`
+  format returned `check_html_manually` errors.
+
+### Changed
+- The parser reads the confirmed SERPHouse shape, `results.results.ai_overview.references[]`
+  (`link`, `source`, `title`); the guessed field names are gone. HTML entities in titles are decoded.
+- The hand-written SERPHouse fixtures were replaced with real captures in `tests/fixtures/serphouse/`.
+- AI Overview presence % now counts incomplete AI Overviews as detected.
+
+### Added
+- `incomplete` check status: an AI Overview was shown, but its sources did not load. These
+  checks are retried once (the retry counts toward the SERP call cap) and are kept out of the
+  citation rate.
+- `incomplete` count and `incomplete rate %` columns in the Summary.
+
+
 ### Added
 - SERP provider adapter interface with a SERPHouse adapter (google.com, India, English, mobile),
   a fake provider, retries, and a per-run SERP call budget.
