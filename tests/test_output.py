@@ -1,7 +1,7 @@
 import csv
 from datetime import datetime
 
-from tracker.checks.base import Reference, SerpResult, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
+from tracker.checks.base import OrganicResult, Reference, SerpResult, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, SUMMARY_HEADERS, CsvWriter, check_row, summarise
 
@@ -19,6 +19,14 @@ def test_check_row_ok_cited():
     d = dict(zip(CHECK_HEADERS, r))
     assert d["date"] == "2026-11-05" and d["time"] == "09:30"
     assert d["ai overview shown"] == "yes" and d["varsity cited"] == "yes" and d["position"] == 2
+
+
+def test_rank_match_column_is_last_and_filled():
+    assert CHECK_HEADERS[-1] == "rank match"
+    r = SerpResult("q", STATUS_NO_AIO, organic=[
+        OrganicResult("https://www.google.com/goto?url=CAESx", position=4, display_url="https://www.interviewbit.com")])
+    d = dict(zip(CHECK_HEADERS, check_row(WHEN, "q", "fde", r, match_citations(r))))
+    assert d["organic rank"] == 4 and d["rank match"] == "domain"
 
 
 def test_no_aio_and_failed_are_distinct():

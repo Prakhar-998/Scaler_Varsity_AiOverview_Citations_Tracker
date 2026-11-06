@@ -70,7 +70,7 @@ def test_match_brand_and_competitors():
     assert m.varsity_cited and m.position == 1
     assert m.brand_cited and m.brand_urls == ["https://www.scaler.com/courses/full-stack-developer/"]
     assert m.competing_domains == ["example-edu.com"]
-    assert m.organic_rank == 2
+    assert m.organic_rank == 2 and m.rank_match == "url"
 
 
 def test_match_real_fixture(load_fixture):
@@ -96,3 +96,42 @@ def test_varsity_position_is_first_occurrence():
     ])
     m = match_citations(r)
     assert m.position == 2 and m.cited_url.endswith("/one/")
+
+
+def _with_organic(load_fixture, name, edits):
+    """Real fixture with some organic results edited, to place Varsity/interviewbit in the SERP."""
+    body = load_fixture(name)
+    organic = body["results"]["results"]["organic"]
+    for i, fields in edits.items():
+        organic[i].update(fields)
+    return parse_response("q", body)
+
+
+def test_rank_domain_level_when_goto_link_is_opaque(load_fixture):
+    # raw5: all 8 organic links are opaque goto redirects. Put interviewbit.com at position 3.
+    r = _with_organic(load_fixture, "serphouse/incomplete_fde_salary_india_mobile.json",
+                      {2: {"displayed_link": "https://www.interviewbit.com"}})
+    assert r.organic[2].url.startswith("https://www.google.com/goto?url=")
+    m = match_citations(r)
+    assert m.organic_rank == 3 and m.rank_match == "domain"
+
+
+def test_rank_url_level_beats_domain_level(load_fixture):
+    # raw8: position 2 is a real (non-redirect) link. Make it a Varsity URL; position 1 shows interviewbit.com.
+    r = _with_organic(load_fixture, "serphouse/aio_what_is_fde_mobile.json", {
+        0: {"displayed_link": "https://www.interviewbit.com"},
+        1: {"link": "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer/?utm_source=x"},
+    })
+    m = match_citations(r)
+    assert m.organic_rank == 2 and m.rank_match == "url"
+
+
+def test_rank_not_found_in_real_fixture(load_fixture):
+    m = match_citations(parse_response("q", load_fixture("serphouse/aio_what_is_fde_mobile.json")))
+    assert m.organic_rank is None and m.rank_match == ""
+
+
+def test_social_results_without_display_url_never_match():
+    r = SerpResult(query="q", status=STATUS_OK, organic=[
+        OrganicResult("https://www.google.com/goto?url=CAESopaque", position=1, display_url="")])
+    assert match_citations(r).rank_match == ""

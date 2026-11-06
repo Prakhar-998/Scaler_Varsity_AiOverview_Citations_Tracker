@@ -19,7 +19,7 @@ from tracker.checks import BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_OK, SerpResult
 from tracker.config import ROOT, load_blogs, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
-from tracker.output import CsvWriter, SheetsWriter, check_row, prompt_row, summarise
+from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
 from tracker.prompts import ACTIVE, GeminiDrafter, draft_candidates, select_prompts
 
 log = logging.getLogger("tracker")
@@ -105,7 +105,8 @@ def cmd_check(args, settings) -> int:
     writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))
-    counts = {s: sum(r[11] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
+    col = CHECK_HEADERS.index("check status")
+    counts = {s: sum(r[col] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
     log.info("%d checks %s; %d SERP calls used", len(rows), counts, budget.used)
     return 0
 
@@ -120,7 +121,7 @@ def cmd_probe(args, settings) -> int:
     for r in result.references:
         print(f"  [{r.position}] {r.url}")
     print(f"varsity cited: {m.varsity_cited} (pos {m.position})  brand cited: {m.brand_cited}  "
-          f"organic rank: {m.organic_rank}")
+          f"organic rank: {m.organic_rank} ({m.rank_match or 'not found'})")
     return 0
 
 

@@ -6,9 +6,11 @@ from typing import List, Optional
 
 from tracker.checks.base import SerpResult
 
-from .urls import domain_of, normalise_url
+from .urls import domain_of, normalise_url, unwrap_google_redirect
 
 VARSITY_PREFIX = "interviewbit.com/varsity/blog/"
+VARSITY_DOMAIN = VARSITY_PREFIX.split("/", 1)[0]
+RANK_URL, RANK_DOMAIN = "url", "domain"
 BRAND_DOMAINS = ("interviewbit.com", "scaler.com")
 
 
@@ -36,6 +38,9 @@ class CitationMatch:
     brand_cited: bool = False
     brand_urls: List[str] = field(default_factory=list)
     organic_rank: Optional[int] = None  # best organic rank of any Varsity page
+    # "url": a /varsity/blog/ URL was seen. "domain": only the interviewbit.com domain was visible
+    # (opaque Google redirect), so it could be another interviewbit.com page. "" when not found.
+    rank_match: str = ""
     competing_domains: List[str] = field(default_factory=list)
 
 
@@ -52,7 +57,22 @@ def match_citations(result: SerpResult) -> CitationMatch:
             d = domain_of(ref.url)
             if d and d not in m.competing_domains:
                 m.competing_domains.append(d)
-    for org in result.organic:
-        if is_varsity(org.url):
-            m.organic_rank = org.position if m.organic_rank is None else min(m.organic_rank, org.position)
+    url_rank, domain_rank = _varsity_organic_ranks(result)
+    # An exact URL match beats a domain-only match, even a higher-ranked one.
+    if url_rank is not None:
+        m.organic_rank, m.rank_match = url_rank, RANK_URL
+    elif domain_rank is not None:
+        m.organic_rank, m.rank_match = domain_rank, RANK_DOMAIN
     return m
+
+
+def _varsity_organic_ranks(result: SerpResult):
+    url_rank = domain_rank = None
+    for org in result.organic:
+        dest = unwrap_google_redirect(org.url)
+        if dest is not None:
+            if is_varsity(dest):
+                url_rank = org.position if url_rank is None else min(url_rank, org.position)
+        elif org.display_url and _on_domain(domain_of(org.display_url), VARSITY_DOMAIN):
+            domain_rank = org.position if domain_rank is None else min(domain_rank, org.position)
+    return url_rank, domain_rank
