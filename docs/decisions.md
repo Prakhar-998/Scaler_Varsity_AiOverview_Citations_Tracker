@@ -88,7 +88,7 @@ readable URL. It can't be decoded.
 - If the destination is opaque, the rank falls back to the domain in `displayed_link`
   (e.g. `https://www.interviewbit.com`). That is a domain-level match. It could be any
   interviewbit.com page, not necessarily a Varsity post.
-- The Checks tab records `rank match` = `url` or `domain` next to each rank. An exact URL match
+- The Checks tab records `rank match` = `url` or `domain` in the column right after `organic rank`. An exact URL match
   wins over a domain match, even a higher-ranked one.
 - Social results (LinkedIn, Reddit) show text such as "740+ reactions" instead of a site URL.
   They get no domain and never match.

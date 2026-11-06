@@ -21,8 +21,8 @@ def test_check_row_ok_cited():
     assert d["ai overview shown"] == "yes" and d["varsity cited"] == "yes" and d["position"] == 2
 
 
-def test_rank_match_column_is_last_and_filled():
-    assert CHECK_HEADERS[-1] == "rank match"
+def test_rank_match_column_follows_organic_rank_and_is_filled():
+    assert CHECK_HEADERS.index("rank match") == CHECK_HEADERS.index("organic rank") + 1
     r = SerpResult("q", STATUS_NO_AIO, organic=[
         OrganicResult("https://www.google.com/goto?url=CAESx", position=4, display_url="https://www.interviewbit.com")])
     d = dict(zip(CHECK_HEADERS, check_row(WHEN, "q", "fde", r, match_citations(r))))

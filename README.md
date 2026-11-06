@@ -76,16 +76,16 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, intent, score, status (active/dropped), reason, source inputs |
-| Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, competing domains, check status, error, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible) |
+| Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
 | Summary | per cluster and ALL: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
 
 Sample `Checks` rows, built from the real SERPHouse fixtures:
 
 ```
-date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,brand cited,organic rank,competing domains,check status,error,rank match
-2026-11-06,17:12,what is a forward deployed engineer,fde,yes,no,,,no,,"linkedin.com, iit.edu, posthog.com, roadmap.sh, nareshit.com",ok,,
-2026-11-06,17:08,forward deployed engineer salary in india,fde,yes,,,,,,,incomplete,AI Overview sources did not load,
-2026-11-05,18:19,best forward deployed engineer course in india,fde,no,,,,,,,no_aio,,
+date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,brand cited,organic rank,rank match,competing domains,check status,error
+2026-11-06,17:12,what is a forward deployed engineer,fde,yes,no,,,no,,,"linkedin.com, iit.edu, posthog.com, roadmap.sh, nareshit.com",ok,
+2026-11-06,17:08,forward deployed engineer salary in india,fde,yes,,,,,,,,incomplete,AI Overview sources did not load
+2026-11-05,18:19,best forward deployed engineer course in india,fde,no,,,,,,,,no_aio,
 ```
 
 ## Tests

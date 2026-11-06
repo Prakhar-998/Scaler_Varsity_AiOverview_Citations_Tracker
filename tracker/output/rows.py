@@ -11,8 +11,8 @@ from tracker.match import CitationMatch
 
 PROMPT_HEADERS = ["prompt", "cluster", "intent", "score", "status", "reason", "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "ai overview shown", "varsity cited", "cited url",
-                 "position", "brand cited", "organic rank", "competing domains", "check status", "error",
-                 "rank match"]  # appended last so existing Checks rows stay aligned
+                 "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
+                 "error"]
 SUMMARY_HEADERS = ["cluster", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
                    "varsity citation rate %", "incomplete rate %", "brand citation rate %"]
 
@@ -35,8 +35,8 @@ def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: 
         _yn(result.shown) if result.status != STATUS_FAILED else "",
         _yn(m.varsity_cited) if cited_known else "",
         m.cited_url, m.position or "", _yn(m.brand_cited) if cited_known else "",
-        m.organic_rank or "", ", ".join(m.competing_domains[:10]),
-        result.status, error, m.rank_match,
+        m.organic_rank or "", m.rank_match, ", ".join(m.competing_domains[:10]),
+        result.status, error,
     ]
 
 

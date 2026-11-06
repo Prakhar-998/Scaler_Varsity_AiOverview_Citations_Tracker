@@ -18,7 +18,7 @@
 ### Added
 - Google redirect links (`/url?q=`, `/goto?url=`) are decoded during URL normalisation when the
   destination is readable.
-- `rank match` column in Checks: `url` for an exact Varsity URL match, `domain` when only the
+- `rank match` column in Checks, right after `organic rank`: `url` for an exact Varsity URL match, `domain` when only the
   interviewbit.com domain was visible (opaque mobile `goto` links, which can't be decoded).
 - `incomplete` check status: an AI Overview was shown, but its sources did not load. These
   checks are retried once (the retry counts toward the SERP call cap) and are kept out of the
