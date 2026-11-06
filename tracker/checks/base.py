@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 STATUS_OK = "ok"          # AI Overview shown and parsed
 STATUS_NO_AIO = "no_aio"  # SERP fetched fine, no AI Overview on it
+STATUS_INCOMPLETE = "incomplete"  # AIO shown but its sources did not load; citations unknown
 STATUS_FAILED = "failed"  # request or parse failed; says nothing about AIO presence
 
 
@@ -57,8 +58,6 @@ class SerpResult:
     references: List[Reference] = field(default_factory=list)
     organic: List[OrganicResult] = field(default_factory=list)
     error: Optional[str] = None
-    # AIO block was present but carried no references (e.g. still loading).
-    incomplete: bool = False
     raw: Optional[Dict[str, Any]] = None
 
     @classmethod

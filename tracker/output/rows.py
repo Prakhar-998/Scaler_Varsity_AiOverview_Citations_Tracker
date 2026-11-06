@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from tracker.checks.base import STATUS_FAILED, STATUS_NO_AIO, STATUS_OK, SerpResult
+from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK, SerpResult
 from tracker.match import CitationMatch
 
 PROMPT_HEADERS = ["prompt", "cluster", "intent", "score", "status", "reason", "source inputs"]
@@ -27,14 +27,15 @@ def _yn(v: bool) -> str:
 
 def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: Optional[CitationMatch]) -> List:
     m = m or CitationMatch()
-    shown = result.status == STATUS_OK and result.shown
+    cited_known = result.status == STATUS_OK  # incomplete: AIO shown but sources unknown
+    error = result.error or ("AI Overview sources did not load" if result.status == STATUS_INCOMPLETE else "")
     return [
         when.strftime("%Y-%m-%d"), when.strftime("%H:%M"), prompt, cluster,
-        _yn(shown) if result.status != STATUS_FAILED else "",
-        _yn(m.varsity_cited) if shown else "",
-        m.cited_url, m.position or "", _yn(m.brand_cited) if shown else "",
+        _yn(result.shown) if result.status != STATUS_FAILED else "",
+        _yn(m.varsity_cited) if cited_known else "",
+        m.cited_url, m.position or "", _yn(m.brand_cited) if cited_known else "",
         m.organic_rank or "", ", ".join(m.competing_domains[:10]),
-        result.status, result.error or ("aio had no references" if result.incomplete else ""),
+        result.status, error,
     ]
 
 

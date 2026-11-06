@@ -2,7 +2,7 @@ import requests
 import pytest
 
 from tracker.checks import BudgetExceeded, CallBudget, get_provider
-from tracker.checks.base import STATUS_FAILED, STATUS_NO_AIO, STATUS_OK
+from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
 from tracker.checks.serphouse import ENDPOINT, SerphouseProvider, parse_response
 from tracker.match import domain_of, match_citations
 
@@ -34,7 +34,7 @@ class FakeSession:
 
 def make(responses, **kw):
     session = FakeSession(responses)
-    return SerphouseProvider("k", session=session, backoff=0, **kw), session
+    return SerphouseProvider("k", session=session, backoff=0, incomplete_delay=0, **kw), session
 
 
 AIO = "serphouse/aio_what_is_fde_mobile.json"
@@ -53,10 +53,43 @@ def test_real_full_aio_parses_five_references_in_order(load_fixture):
     assert not match_citations(result).varsity_cited
 
 
-def test_real_late_loading_aio_has_no_references(load_fixture):
+def test_real_late_loading_aio_is_incomplete_not_no_aio(load_fixture):
     result = parse_response("forward deployed engineer salary in india", load_fixture(INCOMPLETE))
+    assert result.status == STATUS_INCOMPLETE
     assert result.shown and result.references == []
     assert len(result.organic) == 8
+
+
+def test_incomplete_retries_once_then_records_incomplete(load_fixture):
+    budget = CallBudget(10)
+    provider, session = make([FakeResponse(body=load_fixture(INCOMPLETE)),
+                              FakeResponse(body=load_fixture(INCOMPLETE))], budget=budget)
+    result = provider.fetch_ai_overview("forward deployed engineer salary in india")
+    assert result.status == STATUS_INCOMPLETE
+    assert len(session.calls) == 2  # original + exactly one retry
+    assert budget.used == 2         # the retry counts toward the cap
+
+
+def test_incomplete_retry_can_recover_full_aio(load_fixture):
+    provider, session = make([FakeResponse(body=load_fixture(INCOMPLETE)),
+                              FakeResponse(body=load_fixture(AIO))])
+    result = provider.fetch_ai_overview("q")
+    assert result.status == STATUS_OK and len(result.references) == 5
+    assert len(session.calls) == 2
+
+
+def test_incomplete_retry_skipped_when_budget_used_up(load_fixture):
+    budget = CallBudget(1)
+    provider, session = make([FakeResponse(body=load_fixture(INCOMPLETE))], budget=budget)
+    result = provider.fetch_ai_overview("q")
+    assert result.status == STATUS_INCOMPLETE and len(session.calls) == 1
+
+
+def test_full_and_no_aio_are_not_retried(load_fixture):
+    for name in (AIO, NO_AIO):
+        provider, session = make([FakeResponse(body=load_fixture(name))])
+        provider.fetch_ai_overview("q")
+        assert len(session.calls) == 1
 
 
 def test_real_no_aio(load_fixture):

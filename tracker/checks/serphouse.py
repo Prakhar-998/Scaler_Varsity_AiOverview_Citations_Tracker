@@ -20,9 +20,10 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from .base import (
-    STATUS_FAILED,
+    STATUS_INCOMPLETE,
     STATUS_NO_AIO,
     STATUS_OK,
+    BudgetExceeded,
     CallBudget,
     OrganicResult,
     Reference,
@@ -53,6 +54,8 @@ class SerphouseProvider(SerpProvider):
         retries: int = 2,
         timeout: float = 60.0,
         backoff: float = 2.0,
+        incomplete_retries: int = 1,
+        incomplete_delay: float = 5.0,
     ):
         if not api_key:
             raise ValueError("SERPHOUSE_API_KEY is not set")
@@ -62,16 +65,34 @@ class SerphouseProvider(SerpProvider):
         self.retries = retries
         self.timeout = timeout
         self.backoff = backoff
+        self.incomplete_retries = incomplete_retries
+        self.incomplete_delay = incomplete_delay
 
     def fetch_ai_overview(self, query: str) -> SerpResult:
-        body = {"data": dict(DEFAULT_PARAMS, q=query)}
+        """Fetch once; if the AI Overview came back without sources (late load), retry once."""
+        result = self._fetch(query)
+        for _ in range(self.incomplete_retries):
+            if result.status != STATUS_INCOMPLETE:
+                break
+            log.info("AI Overview without sources for %r; retrying", query)
+            time.sleep(self.incomplete_delay)
+            try:
+                result = self._fetch(query)
+            except BudgetExceeded:
+                log.warning("SERP budget used up before incomplete retry for %r", query)
+                break
+        return result
+
+    def _fetch(self, query: str) -> SerpResult:
+        """One logical request, with retries for network errors, 429 and 5xx."""
+        payload = {"data": dict(DEFAULT_PARAMS, q=query)}
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
         last_error = "unknown error"
         for attempt in range(self.retries + 1):
             if self.budget is not None:
                 self.budget.spend()  # every attempt may cost a credit
             try:
-                resp = self.session.post(ENDPOINT, json=body, headers=headers, timeout=self.timeout)
+                resp = self.session.post(ENDPOINT, json=payload, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
                 last_error = f"request error: {exc}"
             else:
@@ -107,14 +128,14 @@ def parse_response(query: str, body: Dict[str, Any]) -> SerpResult:
     if not isinstance(aio, dict):
         return SerpResult(query=query, status=STATUS_NO_AIO, organic=organic, raw=body)
 
+    # A late-loading AI Overview arrives as just {"title": "AI Overview"}: shown, sources unknown.
     refs = _parse_references(aio.get("references") or [])
     return SerpResult(
         query=query,
-        status=STATUS_OK,
+        status=STATUS_OK if refs else STATUS_INCOMPLETE,
         shown=True,
         references=refs,
         organic=organic,
-        incomplete=not refs,
         raw=body,
     )
 

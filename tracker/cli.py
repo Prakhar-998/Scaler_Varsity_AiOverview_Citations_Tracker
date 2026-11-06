@@ -105,7 +105,7 @@ def cmd_check(args, settings) -> int:
     writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))
-    counts = {s: sum(r[11] == s for r in rows) for s in ("ok", "no_aio", "failed")}
+    counts = {s: sum(r[11] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
     log.info("%d checks %s; %d SERP calls used", len(rows), counts, budget.used)
     return 0
 

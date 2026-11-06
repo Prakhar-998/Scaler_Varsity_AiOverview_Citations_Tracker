@@ -1,6 +1,7 @@
 import pytest
 
-from tracker.checks.base import CallBudget, Reference, SerpResult, STATUS_FAILED, STATUS_NO_AIO, STATUS_OK
+from tracker.checks.base import (CallBudget, Reference, SerpResult, STATUS_FAILED, STATUS_INCOMPLETE,
+                                 STATUS_NO_AIO, STATUS_OK)
 from tracker.checks.fake import FakeProvider
 from tracker.config import Blog, Cluster, GscQuery
 from tracker.prompts import ACTIVE, Candidate, classify_intent, draft_candidates, select_prompts
@@ -72,6 +73,14 @@ def test_unmatched_kept_only_if_probe_shows_aio():
     assert "no AI Overview" in ds["is genai worth it for freshers"].reason
     assert "probe failed" in ds["genai vs ml engineer course"].reason
     assert len(provider.calls) == 3
+
+
+def test_incomplete_probe_counts_as_aio_shown():
+    q = "genai course fees in india"
+    provider = FakeProvider({q: SerpResult(q, STATUS_INCOMPLETE, shown=True)})
+    d = select_prompts([cand(q)], [], CLUSTERS, provider, SETTINGS)[0]
+    assert d.status == ACTIVE and d.probe_aio
+    assert any("sources not loaded" in s for s in d.sources)
 
 
 def test_near_duplicates_dropped_before_probing():

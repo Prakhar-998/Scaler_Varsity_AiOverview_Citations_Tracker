@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 from rapidfuzz import fuzz, process
 
-from tracker.checks.base import STATUS_FAILED, STATUS_OK, BudgetExceeded, SerpProvider
+from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, BudgetExceeded, SerpProvider
 from tracker.config import Cluster, GscQuery
 
 from .generate import Candidate
@@ -142,9 +142,10 @@ def select_prompts(
         d.probed = True
         if res.status == STATUS_FAILED:
             d.reason = f"no GSC match; probe failed ({res.error})"
-        elif res.status == STATUS_OK and res.shown:
+        elif res.shown:
             d.probe_aio = True
-            d.sources.append("probe: AI Overview shown")
+            note = " (sources not loaded)" if res.status == STATUS_INCOMPLETE else ""
+            d.sources.append(f"probe: AI Overview shown{note}")
             survivors.append(d)
         else:
             d.probe_aio = False

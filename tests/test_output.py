@@ -1,7 +1,7 @@
 import csv
 from datetime import datetime
 
-from tracker.checks.base import Reference, SerpResult, STATUS_NO_AIO, STATUS_OK
+from tracker.checks.base import Reference, SerpResult, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, check_row, summarise
 
@@ -26,6 +26,12 @@ def test_no_aio_and_failed_are_distinct():
     bad = dict(zip(CHECK_HEADERS, row("genai", SerpResult.failed("q", "HTTP 500"))))
     assert no["check status"] == "no_aio" and no["ai overview shown"] == "no"
     assert bad["check status"] == "failed" and bad["ai overview shown"] == "" and bad["error"] == "HTTP 500"
+
+
+def test_incomplete_row_has_aio_but_unknown_citation():
+    d = dict(zip(CHECK_HEADERS, row("fde", SerpResult("q", STATUS_INCOMPLETE, shown=True))))
+    assert d["check status"] == "incomplete" and d["ai overview shown"] == "yes"
+    assert d["varsity cited"] == "" and d["brand cited"] == ""
 
 
 def test_summary_excludes_failed_from_rates():
