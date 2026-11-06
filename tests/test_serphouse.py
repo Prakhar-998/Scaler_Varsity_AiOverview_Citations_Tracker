@@ -53,6 +53,22 @@ def test_real_full_aio_parses_five_references_in_order(load_fixture):
     assert not match_citations(result).varsity_cited
 
 
+def test_real_organic_keeps_display_url_for_opaque_redirects(load_fixture):
+    organic = parse_response("q", load_fixture(AIO)).organic
+    first = organic[0]
+    assert first.url.startswith("https://www.google.com/goto?url=")
+    assert first.display_url == "https://www.mckinsey.com"
+    # Social result: displayed_link is "340+ reactions · 11 months ago", not a URL
+    assert organic[1].url.startswith("https://www.linkedin.com/posts/") and organic[1].display_url == ""
+
+
+def test_display_url_strips_desktop_breadcrumbs():
+    body = {"status": "success", "results": {"results": {"organic": [
+        {"position": 1, "link": "https://www.google.com/goto?url=CAES",
+         "displayed_link": "https://fde.academy › blog › forward-deployed-enginee... "}]}}}
+    assert parse_response("q", body).organic[0].display_url == "https://fde.academy"
+
+
 def test_real_late_loading_aio_is_incomplete_not_no_aio(load_fixture):
     result = parse_response("forward deployed engineer salary in india", load_fixture(INCOMPLETE))
     assert result.status == STATUS_INCOMPLETE

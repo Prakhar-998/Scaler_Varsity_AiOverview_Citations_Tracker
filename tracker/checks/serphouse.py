@@ -7,7 +7,8 @@ request sends "tbs": "" to clear it. The GET format from their AI Overview docs 
 returned "check_html_manually" errors in testing, so it is not used.
 
 Response shape (confirmed from real captures in tests/fixtures/serphouse/):
-  results.results.organic[]          position, title/site_title, link
+  results.results.organic[]          position, title/site_title, link, displayed_link
+                                     (mobile `link` is mostly an opaque google.com/goto redirect)
   results.results.ai_overview        title, contents[], references[] (source, link, title)
 """
 from __future__ import annotations
@@ -173,8 +174,16 @@ def _parse_organic(items: List[Any]) -> List[OrganicResult]:
             url=url,
             title=_text(item.get("title") or item.get("site_title")),
             position=pos if isinstance(pos, int) else i,
+            display_url=_display_url(item.get("displayed_link")),
         ))
     return out
+
+
+def _display_url(value: Any) -> str:
+    """'https://fde.academy › blog › ...' -> 'https://fde.academy'. Social results show text such as
+    '740+ reactions · 3 months ago' instead of a URL; those return ''."""
+    text = _text(value).split("›")[0].strip()
+    return text if text.lower().startswith(("http://", "https://")) and " " not in text else ""
 
 
 __all__ = ["SerphouseProvider", "parse_response"]

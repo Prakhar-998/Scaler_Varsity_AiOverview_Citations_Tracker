@@ -48,6 +48,9 @@ class OrganicResult:
     url: str
     title: str = ""
     position: int = 0
+    # Site URL as shown on the result (domain, sometimes a breadcrumb). Used for a domain-level
+    # rank when `url` is an opaque Google redirect. Empty when the result shows no site URL.
+    display_url: str = ""
 
 
 @dataclass
