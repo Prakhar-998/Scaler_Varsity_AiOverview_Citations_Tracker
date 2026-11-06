@@ -2,7 +2,8 @@ import pytest
 
 from tracker.checks.base import OrganicResult, Reference, SerpResult, STATUS_OK
 from tracker.checks.serphouse import parse_response
-from tracker.match import is_brand, is_varsity, match_citations, normalise_url
+from tracker.match import (is_brand, is_google_redirect, is_varsity, match_citations, normalise_url,
+                           unwrap_google_redirect)
 
 BASE = "interviewbit.com/varsity/blog/fde-guide"
 
@@ -19,6 +20,32 @@ BASE = "interviewbit.com/varsity/blog/fde-guide"
 ])
 def test_normalise_variants_collapse(url):
     assert normalise_url(url) == BASE
+
+
+def test_plain_google_redirects_are_decoded_before_matching():
+    # Constructed examples of the readable redirect forms (not from a capture).
+    q = "https://www.google.com/url?q=https%3A%2F%2Fwww.interviewbit.com%2Fvarsity%2Fblog%2Ffde-guide%2F&sa=U"
+    goto = "https://www.google.com/goto?url=https://www.interviewbit.com/varsity/blog/fde-guide/?utm_source=x"
+    for link in (q, goto):
+        assert normalise_url(link) == BASE
+        assert is_varsity(link)
+
+
+def test_real_mobile_goto_link_is_opaque(load_fixture):
+    # Real SERPHouse mobile organic link (raw8, position 1, McKinsey): the url= value is an
+    # encrypted token, not a URL, so it can't be decoded.
+    link = load_fixture("serphouse/aio_what_is_fde_mobile.json")["results"]["results"]["organic"][0]["link"]
+    assert link.startswith("https://www.google.com/goto?url=CAES")
+    assert is_google_redirect(link)
+    assert unwrap_google_redirect(link) is None
+    assert normalise_url(link) == "google.com/goto"
+    assert not is_varsity(link) and not is_brand(link)
+
+
+def test_non_redirects_untouched():
+    url = "https://www.linkedin.com/posts/x?utm_source=share"
+    assert not is_google_redirect(url) and unwrap_google_redirect(url) == url
+    assert not is_google_redirect("https://www.google.com/search?q=x")
 
 
 def test_varsity_vs_brand():
