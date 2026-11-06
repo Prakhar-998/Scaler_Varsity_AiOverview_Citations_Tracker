@@ -4,6 +4,7 @@ import pytest
 from tracker.checks import BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, STATUS_NO_AIO, STATUS_OK
 from tracker.checks.serphouse import ENDPOINT, SerphouseProvider, parse_response
+from tracker.match import domain_of, match_citations
 
 
 class FakeResponse:
@@ -36,41 +37,50 @@ def make(responses, **kw):
     return SerphouseProvider("k", session=session, backoff=0, **kw), session
 
 
-def test_parse_aio_references_in_order_and_deduped(load_fixture):
-    result = parse_response("q", load_fixture("synthetic_serphouse_aio.json"))
+AIO = "serphouse/aio_what_is_fde_mobile.json"
+INCOMPLETE = "serphouse/incomplete_fde_salary_india_mobile.json"
+NO_AIO = "serphouse/no_aio_best_fde_course_india.json"
+
+
+def test_real_full_aio_parses_five_references_in_order(load_fixture):
+    result = parse_response("what is a forward deployed engineer", load_fixture(AIO))
     assert result.status == STATUS_OK and result.shown
-    assert [r.position for r in result.references] == [1, 2, 3]
-    assert result.references[1].url == "https://www.example-edu.com/full-stack"
-    assert [o.position for o in result.organic] == [1, 2]
-    assert result.organic[0].title == "Example Edu"
+    domains = [domain_of(r.url) for r in result.references]
+    assert domains == ["linkedin.com", "iit.edu", "posthog.com", "roadmap.sh", "nareshit.com"]
+    assert [r.position for r in result.references] == [1, 2, 3, 4, 5]
+    assert result.references[1].source == "Illinois Institute of Technology"
+    assert "&#39;" not in result.references[0].title  # HTML entities decoded
+    assert not match_citations(result).varsity_cited
 
 
-def test_parse_no_aio_is_not_a_failure(load_fixture):
-    result = parse_response("q", load_fixture("synthetic_serphouse_no_aio.json"))
+def test_real_late_loading_aio_has_no_references(load_fixture):
+    result = parse_response("forward deployed engineer salary in india", load_fixture(INCOMPLETE))
+    assert result.shown and result.references == []
+    assert len(result.organic) == 8
+
+
+def test_real_no_aio(load_fixture):
+    result = parse_response("best forward deployed engineer course in india", load_fixture(NO_AIO))
     assert result.status == STATUS_NO_AIO
     assert not result.shown and result.error is None
-    assert len(result.organic) == 1
+    assert [o.position for o in result.organic] == list(range(1, 10))
+    assert result.organic[0].url.startswith("https://www.learnbay.co/")
 
 
-def test_parse_aio_without_references_is_flagged_incomplete():
-    body = {"status": "success", "results": {"ai_overview": {"text": "loading"}, "organic": []}}
+def test_provider_error_body_fails():
+    # Shape returned by the GET/gl/hl format we no longer use.
+    body = {"status": "error", "msg": "Please try again", "error": "(426251028)check_html_manually"}
     result = parse_response("q", body)
-    assert result.status == STATUS_OK and result.shown and result.incomplete
+    assert result.status == STATUS_FAILED and "check_html_manually" in result.error
 
 
-def test_parse_aio_list_shape_and_alt_keys():
-    body = {"results": {"ai_overviews": [{"sources": [{"url": "https://a.com/x"}]}]}}
-    result = parse_response("q", body)
-    assert [r.url for r in result.references] == ["https://a.com/x"]
-
-
-@pytest.mark.parametrize("body", [{"status": "error", "msg": "bad key"}, {"status": "success"}, []])
+@pytest.mark.parametrize("body", [{"status": "success"}, {"status": "success", "results": {"organic": []}}, []])
 def test_parse_bad_bodies_fail(body):
     assert parse_response("q", body).status == STATUS_FAILED
 
 
 def test_request_is_post_india_english_mobile(load_fixture):
-    provider, session = make([FakeResponse(body=load_fixture("synthetic_serphouse_no_aio.json"))])
+    provider, session = make([FakeResponse(body=load_fixture("serphouse/no_aio_best_fde_course_india.json"))])
     provider.fetch_ai_overview("fde course fees")
     call = session.calls[0]
     assert call["url"] == ENDPOINT
@@ -81,7 +91,7 @@ def test_request_is_post_india_english_mobile(load_fixture):
 
 def test_request_always_clears_verbatim_mode(load_fixture):
     # Without "tbs": "" SERPHouse sends tbs=li:1 (Verbatim), which hides AI Overviews.
-    provider, session = make([FakeResponse(body=load_fixture("synthetic_serphouse_no_aio.json"))])
+    provider, session = make([FakeResponse(body=load_fixture("serphouse/no_aio_best_fde_course_india.json"))])
     provider.fetch_ai_overview("q")
     data = session.calls[0]["json"]["data"]
     assert "tbs" in data, "tbs missing from request body: SERPHouse would default to Verbatim"
@@ -92,7 +102,7 @@ def test_retries_server_errors_then_succeeds(load_fixture):
     provider, session = make([
         FakeResponse(503, text="busy"),
         requests.ConnectionError("reset"),
-        FakeResponse(body=load_fixture("synthetic_serphouse_aio.json")),
+        FakeResponse(body=load_fixture("serphouse/aio_what_is_fde_mobile.json")),
     ])
     assert provider.fetch_ai_overview("q").status == STATUS_OK
     assert len(session.calls) == 3

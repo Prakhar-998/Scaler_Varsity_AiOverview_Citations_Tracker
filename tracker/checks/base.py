@@ -39,6 +39,7 @@ class Reference:
     url: str
     title: str = ""
     position: int = 0  # 1-based order in the AI Overview reference list
+    source: str = ""  # publisher label as shown in the AI Overview, e.g. "LinkedIn · Pablo Gonzalez"
 
 
 @dataclass

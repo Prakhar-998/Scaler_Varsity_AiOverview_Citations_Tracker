@@ -6,12 +6,13 @@ SERPHouse adds Google Verbatim (tbs=li:1) by default, which suppresses AI Overvi
 request sends "tbs": "" to clear it. The GET format from their AI Overview docs (gl/hl params)
 returned "check_html_manually" errors in testing, so it is not used.
 
-The public docs do not give a schema for the AI Overview block, so `parse_response`
-looks for it under a few likely key names and logs which one it found. Once a real
-response is captured into tests/fixtures/, narrow `AIO_KEYS` / `REF_KEYS` to match it.
+Response shape (confirmed from real captures in tests/fixtures/serphouse/):
+  results.results.organic[]          position, title/site_title, link
+  results.results.ai_overview        title, contents[], references[] (source, link, title)
 """
 from __future__ import annotations
 
+import html
 import logging
 import time
 from typing import Any, Dict, List, Optional
@@ -40,12 +41,6 @@ DEFAULT_PARAMS = {
     "serp_type": "web",
     "tbs": "",  # must be sent: clears SERPHouse's default Verbatim mode (tbs=li:1)
 }
-
-# Unconfirmed against a real response yet. Checked in order.
-AIO_KEYS = ("ai_overview", "ai_overviews", "google_ai_overview", "aiOverview")
-REF_KEYS = ("references", "sources", "citations", "links")
-URL_KEYS = ("url", "link", "source_url", "href")
-
 
 class SerphouseProvider(SerpProvider):
     name = "serphouse"
@@ -98,20 +93,21 @@ def parse_response(query: str, body: Dict[str, Any]) -> SerpResult:
     """Turn a SERPHouse JSON body into a SerpResult. Pure function, tested offline."""
     if not isinstance(body, dict):
         return SerpResult.failed(query, "response body is not an object")
-    if str(body.get("status", "success")).lower() not in ("success", "ok"):
-        return SerpResult.failed(query, f"provider status: {body.get('status')} {body.get('msg', '')}".strip(), body)
+    if str(body.get("status", "")).lower() != "success":
+        detail = body.get("error") or body.get("msg") or ""
+        return SerpResult.failed(query, f"provider status: {body.get('status')} {detail}".strip(), body)
 
-    results = _results_block(body)
-    if results is None:
-        return SerpResult.failed(query, "no results block in response", body)
+    outer = body.get("results")
+    results = outer.get("results") if isinstance(outer, dict) else None
+    if not isinstance(results, dict):
+        return SerpResult.failed(query, "no results.results block in response", body)
 
     organic = _parse_organic(results.get("organic") or [])
-    aio_key, aio = _find_aio(results)
-    if aio is None:
+    aio = results.get("ai_overview")
+    if not isinstance(aio, dict):
         return SerpResult(query=query, status=STATUS_NO_AIO, organic=organic, raw=body)
 
-    log.debug("AI Overview found under key %r", aio_key)
-    refs = _parse_references(aio)
+    refs = _parse_references(aio.get("references") or [])
     return SerpResult(
         query=query,
         status=STATUS_OK,
@@ -123,47 +119,23 @@ def parse_response(query: str, body: Dict[str, Any]) -> SerpResult:
     )
 
 
-def _results_block(body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    # Seen shapes: {"results": {"organic": ...}} and {"results": {"results": {"organic": ...}}}
-    block = body.get("results")
-    if isinstance(block, dict) and isinstance(block.get("results"), dict):
-        block = block["results"]
-    return block if isinstance(block, dict) else None
+def _text(value: Any) -> str:
+    return html.unescape(str(value or "")).strip()
 
 
-def _find_aio(results: Dict[str, Any]):
-    for key in AIO_KEYS:
-        value = results.get(key)
-        if isinstance(value, list):
-            value = value[0] if value else None
-        if isinstance(value, dict) and value:
-            return key, value
-    return None, None
-
-
-def _first_url(item: Dict[str, Any]) -> str:
-    for key in URL_KEYS:
-        if isinstance(item.get(key), str) and item[key]:
-            return item[key]
-    return ""
-
-
-def _parse_references(aio: Dict[str, Any]) -> List[Reference]:
-    items: List[Any] = []
-    for key in REF_KEYS:
-        if isinstance(aio.get(key), list):
-            items = aio[key]
-            break
+def _parse_references(items: List[Any]) -> List[Reference]:
+    """Reference order in the AI Overview is the citation position (1-based)."""
     refs: List[Reference] = []
     seen = set()
     for item in items:
         if not isinstance(item, dict):
             continue
-        url = _first_url(item)
-        if not url or url in seen:
+        url = item.get("link")
+        if not isinstance(url, str) or not url or url in seen:
             continue
         seen.add(url)
-        refs.append(Reference(url=url, title=str(item.get("title", "")), position=len(refs) + 1))
+        refs.append(Reference(url=url, title=_text(item.get("title")), source=_text(item.get("source")),
+                              position=len(refs) + 1))
     return refs
 
 
@@ -172,16 +144,16 @@ def _parse_organic(items: List[Any]) -> List[OrganicResult]:
     for i, item in enumerate(items, start=1):
         if not isinstance(item, dict):
             continue
-        url = _first_url(item)
-        if not url:
+        url = item.get("link")
+        if not isinstance(url, str) or not url:
             continue
         pos = item.get("position")
         out.append(OrganicResult(
             url=url,
-            title=str(item.get("title") or item.get("site_title") or ""),
-            position=int(pos) if isinstance(pos, (int, str)) and str(pos).isdigit() else i,
+            title=_text(item.get("title") or item.get("site_title")),
+            position=pos if isinstance(pos, int) else i,
         ))
     return out
 
 
-__all__ = ["SerphouseProvider", "parse_response", "STATUS_OK", "STATUS_NO_AIO", "STATUS_FAILED"]
+__all__ = ["SerphouseProvider", "parse_response"]

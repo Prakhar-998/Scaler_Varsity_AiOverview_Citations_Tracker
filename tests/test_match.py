@@ -32,12 +32,24 @@ def test_varsity_vs_brand():
     assert not is_brand("https://notscaler.com/x")
 
 
-def test_match_from_fixture(load_fixture):
-    m = match_citations(parse_response("q", load_fixture("synthetic_serphouse_aio.json")))
+def test_match_brand_and_competitors():
+    r = SerpResult(query="q", status=STATUS_OK, shown=True, references=[
+        Reference("https://www.interviewbit.com/varsity/blog/x/?utm_source=x", position=1),
+        Reference("https://www.example-edu.com/full-stack", position=2),
+        Reference("https://www.scaler.com/courses/full-stack-developer/", position=3),
+    ], organic=[OrganicResult("https://www.example-edu.com/a", position=1),
+                OrganicResult("https://www.interviewbit.com/varsity/blog/x/", position=2)])
+    m = match_citations(r)
     assert m.varsity_cited and m.position == 1
     assert m.brand_cited and m.brand_urls == ["https://www.scaler.com/courses/full-stack-developer/"]
     assert m.competing_domains == ["example-edu.com"]
     assert m.organic_rank == 2
+
+
+def test_match_real_fixture(load_fixture):
+    m = match_citations(parse_response("q", load_fixture("serphouse/aio_what_is_fde_mobile.json")))
+    assert not m.varsity_cited and not m.brand_cited
+    assert m.competing_domains == ["linkedin.com", "iit.edu", "posthog.com", "roadmap.sh", "nareshit.com"]
 
 
 def test_no_varsity():
