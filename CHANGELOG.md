@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- Organic rank is now recorded on `no_aio` and `incomplete` checks, not only `ok` ones.
 - SERPHouse requests now always send `tbs: ""`. SERPHouse added Google Verbatim (`tbs=li:1`) by
   default, which suppressed AI Overviews.
 - SERPHouse requests use `POST /serp/live` with a JSON `{"data": {...}}` body. The GET `gl`/`hl`
@@ -15,6 +16,10 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Added
+- Google redirect links (`/url?q=`, `/goto?url=`) are decoded during URL normalisation when the
+  destination is readable.
+- `rank match` column in Checks: `url` for an exact Varsity URL match, `domain` when only the
+  interviewbit.com domain was visible (opaque mobile `goto` links, which can't be decoded).
 - `incomplete` check status: an AI Overview was shown, but its sources did not load. These
   checks are retried once (the retry counts toward the SERP call cap) and are kept out of the
   citation rate.

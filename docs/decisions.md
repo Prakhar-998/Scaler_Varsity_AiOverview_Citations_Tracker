@@ -74,3 +74,26 @@ it gets its own status.
 numbers rest on too small and possibly biased a share of AI Overviews. In that case we move to
 DataForSEO, whose `load_async_ai_overview` option waits for AI Overviews that load late. That is
 one new adapter file (see "One provider adapter").
+
+## Organic rank on mobile: URL match where possible, domain match otherwise
+On mobile, most organic `link`s SERPHouse returns are `google.com/goto?url=...` redirects. In the
+2026-11-06 captures, 15 of the 16 organic results in raw5 and raw8 were redirects. We checked
+whether `url=` holds the URL-encoded destination. It does not. Every value is a base64
+protobuf (`08 01 12 …`) wrapping about 150 bytes of opaque, apparently encrypted data with no
+readable URL. It can't be decoded.
+
+**Rule:**
+- During normalisation, Google redirects are unwrapped whenever the destination is readable
+  (`/url?q=https…`, or `/goto?url=https…`). Those links get a URL-level match.
+- If the destination is opaque, the rank falls back to the domain in `displayed_link`
+  (e.g. `https://www.interviewbit.com`). That is a domain-level match. It could be any
+  interviewbit.com page, not necessarily a Varsity post.
+- The Checks tab records `rank match` = `url` or `domain` next to each rank. An exact URL match
+  wins over a domain match, even a higher-ranked one.
+- Social results (LinkedIn, Reddit) show text such as "740+ reactions" instead of a site URL.
+  They get no domain and never match.
+- No other provider is called for this. Organic rank is a secondary metric; AI Overview
+  reference links are real URLs and are not affected.
+
+Organic rank is now recorded on every non-failed check, including `no_aio` and `incomplete`,
+because it does not depend on the AI Overview.
