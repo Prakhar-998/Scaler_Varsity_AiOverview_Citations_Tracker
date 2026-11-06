@@ -23,8 +23,8 @@ class FakeSession:
         self.responses = list(responses)
         self.calls = []
 
-    def get(self, url, params=None, headers=None, timeout=None):
-        self.calls.append({"url": url, "params": params, "headers": headers})
+    def post(self, url, json=None, headers=None, timeout=None):
+        self.calls.append({"url": url, "json": json, "headers": headers})
         item = self.responses.pop(0)
         if isinstance(item, Exception):
             raise item
@@ -69,14 +69,23 @@ def test_parse_bad_bodies_fail(body):
     assert parse_response("q", body).status == STATUS_FAILED
 
 
-def test_request_uses_india_english_mobile(load_fixture):
+def test_request_is_post_india_english_mobile(load_fixture):
     provider, session = make([FakeResponse(body=load_fixture("synthetic_serphouse_no_aio.json"))])
     provider.fetch_ai_overview("fde course fees")
     call = session.calls[0]
     assert call["url"] == ENDPOINT
-    assert call["params"] == {"q": "fde course fees", "domain": "google.com", "loc": "India",
-                              "lang": "en", "device": "mobile", "serp_type": "web"}
+    assert call["json"] == {"data": {"q": "fde course fees", "domain": "google.com", "loc": "India",
+                                     "lang": "en", "device": "mobile", "serp_type": "web", "tbs": ""}}
     assert call["headers"]["Authorization"] == "Bearer k"
+
+
+def test_request_always_clears_verbatim_mode(load_fixture):
+    # Without "tbs": "" SERPHouse sends tbs=li:1 (Verbatim), which hides AI Overviews.
+    provider, session = make([FakeResponse(body=load_fixture("synthetic_serphouse_no_aio.json"))])
+    provider.fetch_ai_overview("q")
+    data = session.calls[0]["json"]["data"]
+    assert "tbs" in data, "tbs missing from request body: SERPHouse would default to Verbatim"
+    assert data["tbs"] == ""
 
 
 def test_retries_server_errors_then_succeeds(load_fixture):

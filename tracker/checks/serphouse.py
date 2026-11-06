@@ -1,6 +1,10 @@
 """SERPHouse adapter (prototype provider).
 
-Endpoint: GET https://api.serphouse.com/serp/live with a Bearer token.
+Endpoint: POST https://api.serphouse.com/serp/live, JSON body {"data": {...}}, Bearer token.
+
+SERPHouse adds Google Verbatim (tbs=li:1) by default, which suppresses AI Overviews, so every
+request sends "tbs": "" to clear it. The GET format from their AI Overview docs (gl/hl params)
+returned "check_html_manually" errors in testing, so it is not used.
 
 The public docs do not give a schema for the AI Overview block, so `parse_response`
 looks for it under a few likely key names and logs which one it found. Once a real
@@ -34,6 +38,7 @@ DEFAULT_PARAMS = {
     "lang": "en",
     "device": "mobile",
     "serp_type": "web",
+    "tbs": "",  # must be sent: clears SERPHouse's default Verbatim mode (tbs=li:1)
 }
 
 # Unconfirmed against a real response yet. Checked in order.
@@ -64,14 +69,14 @@ class SerphouseProvider(SerpProvider):
         self.backoff = backoff
 
     def fetch_ai_overview(self, query: str) -> SerpResult:
-        params = dict(DEFAULT_PARAMS, q=query)
+        body = {"data": dict(DEFAULT_PARAMS, q=query)}
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
         last_error = "unknown error"
         for attempt in range(self.retries + 1):
             if self.budget is not None:
                 self.budget.spend()  # every attempt may cost a credit
             try:
-                resp = self.session.get(ENDPOINT, params=params, headers=headers, timeout=self.timeout)
+                resp = self.session.post(ENDPOINT, json=body, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
                 last_error = f"request error: {exc}"
             else:
