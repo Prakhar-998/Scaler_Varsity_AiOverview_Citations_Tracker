@@ -1,0 +1,164 @@
+{
+  "status": "success",
+  "msg": "Completed",
+  "results": {
+    "search_metadata": {
+      "id": 273726941,
+      "status": "success",
+      "created_at": "2026-11-05T12:49:53.000000Z",
+      "processed_at": "2026-11-05 12:49:53"
+    },
+    "search_parameters": {
+      "domain": "google.com",
+      "lang": "en",
+      "country": "IN",
+      "location": "India",
+      "q": "best forward deployed engineer course in india",
+      "device": "mobile",
+      "url": "https://www.google.com/search?q=best+forward+deployed+engineer+course+in+india&uule=w+CAIQICIFSW5kaWE=&hl=en&gl=IN&ie=UTF-8&tbs=li:1",
+      "page": "1",
+      "num": 10,
+      "ie": "UTF-8",
+      "tbs": "li:1"
+    },
+    "results": {
+      "inline_videos": [
+        {
+          "title": "FDE (Forward Deployed Engineer) - Naresh IT",
+          "channel": "Naresh i Technologies",
+          "source": "YouTube",
+          "date": "1 week ago",
+          "url": "https://www.youtube.com/shorts/JjW1KhXhChE"
+        },
+        {
+          "title": "FDE | Forward Deployed Engineer | Veerababu | Naresh IT",
+          "channel": "Naresh i Technologies",
+          "source": "YouTube",
+          "date": "4 weeks ago",
+          "url": "https://www.youtube.com/watch?v=Z3Tzy72vX2s"
+        },
+        {
+          "title": "Forward Deployed Engineer: The Hottest Job in AI Right Now?",
+          "channel": "SCALER",
+          "source": "YouTube",
+          "date": "2 weeks ago",
+          "url": "https://www.youtube.com/shorts/scQUEWJ_DVQ"
+        }
+      ],
+      "organic": [
+        {
+          "position": 1,
+          "site_title": "Learnbay",
+          "title": "Best Forward Deployed Engineer Courses in India (2026): An Honest Ranking ",
+          "link": "https://www.learnbay.co/blogs/best-forward-deployed-engineer-courses-in-india",
+          "displayed_link": "https://www.learnbay.co",
+          "snippet": "20 Oct 2026  \u2014  Forward Deployed AI Engineer Program from Learnbay, is the most complete option in India: 12 months, 100% live, 15 FDE projects "
+        },
+        {
+          "position": 2,
+          "site_title": "FDE Academy",
+          "title": "FDE Course: Become a Forward Deployed Engineer with IIT Certification ",
+          "link": "https://fde.academy/",
+          "displayed_link": "https://fde.academy",
+          "snippet": "FDE Course: Become a Forward Deployed Engineer in 8 Months. PGP in Forward Deployed Engineering (FDE) &amp; Applied AI Solutions. Be One Of India's First Forward\u00a0... "
+        },
+        {
+          "position": 3,
+          "site_title": "Naresh i Technologies",
+          "title": "Forward Deployed Engineer Training Course, Best Online ... ",
+          "link": "https://nareshit.in/forward-deployed-engineer-training/",
+          "displayed_link": "https://nareshit.in",
+          "snippet": "Forward Deployed Engineer (FDE) Training is a 16-week industry-aligned program designed to prepare engineers to solve real-world customer problems, build AI-\u00a0... "
+        },
+        {
+          "position": 4,
+          "site_title": "Applied AI Course",
+          "title": "Best FDE Courses in India (2026): 10 Programmes, Bootcamps and Certifications Compared ",
+          "link": "https://www.appliedaicourse.com/blog/best-fde-courses-in-india/",
+          "displayed_link": "https://www.appliedaicourse.com",
+          "snippet": "6 Oct 2026  \u2014  The Scaler AI Forward Deployed Engineer Program is the best FDE course in India for most working engineers: 12 months, 197 live sessions, five\u00a0... "
+        },
+        {
+          "position": 5,
+          "site_title": "InterviewBit",
+          "title": "Best Forward Deployed Engineer Certification in India 2026: What Exists, What It Costs, What Employers Check - Varsity Blog ",
+          "link": "https://www.interviewbit.com/varsity/blog/best-forward-deployed-engineer-certification-in-india/",
+          "displayed_link": "https://www.interviewbit.com",
+          "snippet": "3 Oct 2026  \u2014  Short answer: ten options exist, from a $150 cloud exam to \u20b93.9 lakh for a full year of guided client work. Six are live programmes (two of\u00a0... "
+        },
+        {
+          "position": 6,
+          "site_title": "fdemasters.com",
+          "title": "Honest Review - Best Forward Deployed Engineer Courses in Hyderabad (2026) ",
+          "link": "https://fdemasters.com/best-forward-deployed-engineer-courses-in-hyderabad/",
+          "displayed_link": "https://fdemasters.com",
+          "snippet": "7 Oct 2026  \u2014  Best forward deployed engineer courses in Hyderabad: 5 criteria, 11 institutes compared on public fees, who each suits, and a 10-point demo\u00a0...\u00a0... "
+        },
+        {
+          "position": 7,
+          "site_title": "Quality Thought",
+          "title": "Forward Deployed Engineer Course in Hyderabad ",
+          "link": "https://qualitythought.in/forward-deployed-engineer/",
+          "displayed_link": "https://qualitythought.in",
+          "snippet": "Thought's Forward Deployed Engineer program in Hyderabad prepares engineers to build, integrate, and deploy AI systems in real customer environments\u00a0... "
+        },
+        {
+          "position": 8,
+          "site_title": "analyticsindiamag.com",
+          "title": "Top 10 Forward Deployed Engineering Courses in 2026 - Analytics India Magazine ",
+          "link": "https://analyticsindiamag.com/ai-highlights/top-10-forward-deployed-engineering-courses-in-2026",
+          "displayed_link": "https://analyticsindiamag.com",
+          "snippet": "17 Aug 2026  \u2014  The Top 10 in Detail \u00b7 10. Advanced AI Forward Deployed Engineer Program \u2014 FDE Academy \u00b7 9. Certified Forward Deployed Engineer \u2014 AIU \u00b7 8. Forward\u00a0..."
+        },
+        {
+          "position": 9,
+          "site_title": "BIT - Baroda Institute of Technology",
+          "title": "AI-Forward Deployed Engineer Bootcamp | Enterprise AI ",
+          "link": "https://bitbaroda.com/courses/ai-engineering-course",
+          "displayed_link": "https://bitbaroda.com",
+          "snippet": "This intensive bootcamp transforms you into an AI-Forward Deployed Engineer. You will master core software engineering, serverless cloud deployment and\u00a0... "
+        }
+      ],
+      "people_also_ask": [
+        {
+          "title": "What to study to become a forward deployed engineer?"
+        },
+        {
+          "title": "Is a forward deployed engineer in demand?"
+        },
+        {
+          "title": "Is there a FDE course available in India?"
+        },
+        {
+          "title": "What is the salary of a forward deployed engineer in India?"
+        }
+      ],
+      "related_search": [
+        {
+          "title": "Forward Deployed Engineer course fee",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=Forward+Deployed+Engineer+course+fee&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhCEAE"
+        },
+        {
+          "title": "Forward Deployed Engineer certification",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=Forward+Deployed+Engineer+certification&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhZEAE"
+        },
+        {
+          "title": "Forward Deployed Engineer course online",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=Forward+Deployed+Engineer+course+online&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhMEAE"
+        },
+        {
+          "title": "Forward Deployed AI Engineer course",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=Forward+Deployed+AI+Engineer+course&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhHEAE"
+        },
+        {
+          "title": "Forward Deployed Engineer Coursera",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=Forward+Deployed+Engineer+Coursera&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhDEAE"
+        },
+        {
+          "title": "IIT Delhi Forward Deployed Engineer",
+          "link": "https://www.google.com/search?sca_esv=1eb0b4eea87ca2ee&hl=en&gl=IN&tbs=li:1&sxsrf=AKL5yDhwRYVz2fbupvD300-cZhpxPUX7RA:1793882990504&q=IIT+Delhi+Forward+Deployed+Engineer&sa=X&ved=2ahUKEwjs6qrz7vCXAxWQlYkEHW1OLq0Q1QJ6BAhGEAE"
+        }
+      ]
+    }
+  }
+}
