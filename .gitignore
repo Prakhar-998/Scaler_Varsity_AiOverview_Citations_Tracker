@@ -15,3 +15,6 @@ __pycache__/
 # Run artefacts
 runs/
 data/private/
+
+# Raw SERP captures in the repo root (curated copies live in tests/fixtures/)
+/raw*.json
