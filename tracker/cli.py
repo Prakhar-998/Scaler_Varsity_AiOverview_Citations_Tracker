@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from tracker.checks import BudgetExceeded, CallBudget, get_provider
-from tracker.checks.base import STATUS_OK, SerpResult
+from tracker.checks.base import STATUS_FAILED, SerpResult
 from tracker.config import ROOT, load_blogs, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
@@ -80,7 +80,8 @@ def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[
             break
         if raw_dir is not None and result.raw is not None:
             (raw_dir / f"{i:03d}.json").write_text(json.dumps({"query": p["prompt"], "body": result.raw}, indent=2))
-        m = match_citations(result) if result.status == STATUS_OK else None
+        # organic rank is independent of the AI Overview, so match every non-failed check
+        m = match_citations(result) if result.status != STATUS_FAILED else None
         rows.append(check_row(when, p["prompt"], p["cluster"], result, m))
     return rows
 
