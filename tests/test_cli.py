@@ -301,3 +301,48 @@ def test_drafted_candidates_saved_before_any_probe(tmp_path, monkeypatch):
     rows = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*/candidates.csv")))))
     assert rows[0] == {"prompt": "best generative ai course for working professionals", "cluster": "fde",
                        "source": "llm", "intent": "best", "source blog": rows[0]["source blog"]}
+
+
+def _prompt_file(tmp_path, text):
+    path = tmp_path / "prompts.csv"
+    path.write_text(text)
+    return str(path)
+
+
+def test_source_none_uses_only_the_prompt_file(tmp_path, monkeypatch):
+    def boom(settings):
+        raise AssertionError("no drafting with --prompts and --source none")
+
+    monkeypatch.setattr(cli, "make_drafter", boom)
+    path = _prompt_file(tmp_path, "prompt,cluster\nbest fde course in india,fde\nfde course fees,fde\n"
+                                  "best fde course in india,fde\nnot a cluster prompt here,xyz\n")
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    provider = FakeProvider({q: SerpResult(q, STATUS_INCOMPLETE, shown=True)
+                             for q in ("best fde course in india", "fde course fees")})
+    monkeypatch.setattr(cli, "get_provider", lambda name, budget, device="mobile": provider)
+    code = cli.main(["select", "--source", "none", "--prompts", path, "--dry-run"])
+    assert code == 0
+    active = json.loads((tmp_path / "active.json").read_text())
+    assert sorted(active, key=lambda p: p["prompt"]) == [
+        {"prompt": "best fde course in india", "cluster": "fde", "source": "manual"},
+        {"prompt": "fde course fees", "cluster": "fde", "source": "manual"}]
+    assert sorted(provider.calls) == ["best fde course in india", "fde course fees"]  # duplicate never probed
+    rows = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "prompts.csv")))
+    assert any(r["reason"] == "exact duplicate" for r in rows)
+
+
+def test_prompts_combine_with_gsc_and_reuse_a_saved_candidates_file(tmp_path, monkeypatch):
+    path = _prompt_file(tmp_path, "prompt,cluster,source,intent,source blog\n"
+                                  "best generative ai course in india,genai,llm,best,Some blog\n"
+                                  "generative ai course for working professionals,genai,llm,,Some blog\n")
+    code, active = _select(tmp_path, monkeypatch, "--source", "gsc", "--prompts", path, "--no-probe", blogs=False)
+    assert code == 0
+    by_prompt = {p["prompt"]: p["source"] for p in active}
+    assert by_prompt["best generative ai course in india"] == "gsc"  # GSC version wins the duplicate
+    assert "generative ai course for working professionals" not in by_prompt  # no GSC match, no probe
+
+
+def test_source_none_without_prompts_is_an_error(tmp_path, monkeypatch, caplog):
+    code, _ = _select(tmp_path, monkeypatch, "--source", "none", blogs=False)
+    assert code == 2 and "--source none needs --prompts" in caplog.text

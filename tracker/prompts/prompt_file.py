@@ -1,16 +1,24 @@
-"""Candidate files: drafted LLM candidates are saved to candidates.csv before any probe SERP calls.
+"""Candidate files: drafted LLM candidates saved before probing, and prompt files loaded back in.
 
-Columns: prompt, cluster, source, intent, source blog
+`candidates.csv` (written by select) and hand-made prompt files share one format:
+  prompt, cluster                     required
+  source, intent, source blog         optional; source defaults to "manual", intent to classify_intent
 """
 from __future__ import annotations
 
 import csv
+import logging
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, List
 
-from .generate import Candidate
+from tracker.config import Cluster
+
+from .generate import INTENT_PATTERNS, OTHER_INTENT_WEIGHT, Candidate, classify_intent, clean_prompt
+
+log = logging.getLogger(__name__)
 
 CANDIDATE_HEADERS = ["prompt", "cluster", "source", "intent", "source blog"]
+INTENT_WEIGHTS = {intent: weight for intent, _, weight in INTENT_PATTERNS}
 
 
 class CandidateLog:
@@ -30,4 +38,32 @@ class CandidateLog:
         self.count += len(rows)
 
 
-__all__ = ["CANDIDATE_HEADERS", "CandidateLog"]
+def load_prompt_file(path: Path, clusters: List[Cluster]) -> List[Candidate]:
+    """Read a prompt file. Rows with no prompt, or a cluster that isn't active, are skipped with a warning."""
+    keys = {c.key for c in clusters}
+    out: List[Candidate] = []
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fields = {(h or "").strip().lower() for h in reader.fieldnames or []}
+        if not {"prompt", "cluster"} <= fields:
+            raise ValueError(f"{path}: needs 'prompt' and 'cluster' columns (found: {', '.join(sorted(fields))})")
+        for n, raw in enumerate(reader, start=2):
+            row = {(k or "").strip().lower(): (v or "").strip() for k, v in raw.items()}
+            prompt, cluster = clean_prompt(row.get("prompt", "")), row.get("cluster", "").lower()
+            if not prompt:
+                continue
+            if cluster not in keys:
+                log.warning("%s line %d: cluster %r is not an active cluster; skipped: %s", path, n, cluster, prompt)
+                continue
+            intent = row.get("intent", "").lower()
+            if intent in INTENT_WEIGHTS or intent == "other":
+                weight = INTENT_WEIGHTS.get(intent, OTHER_INTENT_WEIGHT)
+            else:
+                intent, weight = classify_intent(prompt)
+            out.append(Candidate(prompt, cluster, row.get("source blog", ""), intent, weight,
+                                 source=row.get("source", "").lower() or "manual"))
+    log.info("%d prompts loaded from %s", len(out), path)
+    return out
+
+
+__all__ = ["CANDIDATE_HEADERS", "CandidateLog", "load_prompt_file"]

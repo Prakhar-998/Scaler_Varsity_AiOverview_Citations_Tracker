@@ -25,8 +25,8 @@ from tracker.config import ROOT, load_blogs, load_brand_rules, load_clusters, lo
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
 from tracker.llm import build_chain
-from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, select_prompts,
-                             tag_brands)
+from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, load_prompt_file,
+                             select_prompts, tag_brands)
 
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
@@ -108,19 +108,31 @@ def make_drafter(settings) -> Optional[LLMDrafter]:
 
 
 def cmd_select(args, settings) -> int:
-    if args.source != "gsc" and not args.blogs:
+    if args.source in ("llm", "both") and not args.blogs:
         log.error("--blogs is required with --source %s", args.source)
+        return 2
+    if args.source == "none" and not args.prompts:
+        log.error("--source none needs --prompts")
+        return 2
+    if args.source != "none" and not args.gsc:
+        log.error("--gsc is required with --source %s", args.source)
         return 2
     clusters = load_clusters()
     rules = load_brand_rules()
-    gsc = load_gsc(Path(args.gsc), clusters)
-    log.info("source: %s; %d GSC queries", args.source, len(gsc))
+    # with --source none, a GSC export is optional; it still adds GSC matches and demand to scoring
+    gsc = load_gsc(Path(args.gsc), clusters) if args.gsc else []
+    log.info("source: %s%s; %d GSC queries", args.source, f" + {args.prompts}" if args.prompts else "", len(gsc))
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # GSC first, so when both sources produce the same search the GSC version is the one kept
     candidates = []
     if args.source in ("gsc", "both"):
         candidates += gsc_candidates(gsc, clusters, rules, float(settings.get("dedupe_threshold", 90)))
+    if args.prompts:
+        # a saved candidates.csv or a manual list: no drafting, but the same dedupe, probe filter and scoring
+        loaded = load_prompt_file(Path(args.prompts), clusters)
+        tag_brands(loaded, rules)
+        candidates += loaded
     if args.source in ("llm", "both"):
         blogs = [b for b in load_blogs(Path(args.blogs), clusters) if b.cluster is not None]
         log.info("%d blogs in active clusters", len(blogs))
@@ -240,9 +252,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("select", help="draft, filter and score prompts")
     s.add_argument("--blogs", help="CSV: title, primary_keyword, url (needed unless --source gsc)")
-    s.add_argument("--gsc", required=True, help="CSV: query, impressions (or raw GSC export)")
-    s.add_argument("--source", choices=("gsc", "llm", "both"), default="both",
-                   help="candidate sources: real GSC queries, LLM drafts per blog, or both (default)")
+    s.add_argument("--gsc", help="CSV: query, impressions (or raw GSC export); optional with --source none")
+    s.add_argument("--source", choices=("gsc", "llm", "both", "none"), default="both",
+                   help="candidate sources: real GSC queries, LLM drafts per blog, both (default), or none "
+                        "(only --prompts)")
+    s.add_argument("--prompts", help="CSV of candidates to add (prompt, cluster; optional source, intent), e.g. a "
+                                     "saved candidates.csv or manual prompts; combinable with --source")
     s.add_argument("--no-probe", action="store_true", help="skip probe SERP calls")
     s.add_argument("--limit", type=int, help="draft for only the first N blogs in active clusters (quick tests)")
 
