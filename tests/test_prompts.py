@@ -37,6 +37,12 @@ class FakeDrafter:
     ("is genai course worth it", "worth"),
     ("genai for working professionals", "audience"),
     ("what is genai", "other"),
+    ("fde salary in india", "salary"),
+    ("fde training online", "course"),
+    ("genai courses", "course"),
+    ("which is better langchain or langgraph", "comparison"),
+    ("fde academy reviews", "worth"),
+    ("genai institute near me", "course"),
 ])
 def test_classify_intent(prompt, intent):
     assert classify_intent(prompt)[0] == intent

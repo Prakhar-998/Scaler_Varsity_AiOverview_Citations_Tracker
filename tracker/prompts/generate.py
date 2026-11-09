@@ -17,10 +17,12 @@ INTENT_PATTERNS = [
     # (intent, regex, buying-intent weight 0..1)
     ("fees", r"\b(fees?|cost|price|pricing)\b", 1.0),
     ("best", r"\b(best|top)\b", 0.9),
-    ("comparison", r"\b(vs\.?|versus|or)\b", 0.8),
-    ("worth", r"\bworth\b", 0.8),
+    ("comparison", r"\b(vs\.?|versus|or|compare|comparison|which)\b", 0.8),
+    ("worth", r"\b(worth|reviews?)\b", 0.8),
     ("audience", r"\bfor (working professionals|freshers|beginners|non[- ]tech)\b", 0.7),
-    ("course", r"\b(course|program|certification|bootcamp)\b", 0.6),
+    ("course", r"\b(courses?|program|programme|certification|certificate|bootcamp|training|institute|online)\b"
+               r"|\bnear me\b", 0.6),
+    ("salary", r"\bsalary\b", 0.5),
 ]
 OTHER_INTENT_WEIGHT = 0.2
 
