@@ -346,3 +346,16 @@ def test_prompts_combine_with_gsc_and_reuse_a_saved_candidates_file(tmp_path, mo
 def test_source_none_without_prompts_is_an_error(tmp_path, monkeypatch, caplog):
     code, _ = _select(tmp_path, monkeypatch, "--source", "none", blogs=False)
     assert code == 2 and "--source none needs --prompts" in caplog.text
+
+
+def test_check_prompt_file_leaves_active_prompts_untouched(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    real = json.dumps([{"prompt": "the real set", "cluster": "fde"}])
+    (tmp_path / "active.json").write_text(real)
+    path = _prompt_file(tmp_path, "prompt,cluster\nwhat is a forward deployed engineer,fde\n"
+                                  "best generative ai course in india,genai\n")
+    assert cli.main(["--provider", "fake", "check", "--prompts", path, "--dry-run"]) == 0
+    checks = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "checks.csv")))
+    assert [r["prompt"] for r in checks] == ["what is a forward deployed engineer", "best generative ai course in india"]
+    assert (tmp_path / "active.json").read_text() == real

@@ -196,10 +196,15 @@ def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[
 
 
 def cmd_check(args, settings) -> int:
-    if not ACTIVE_PROMPTS.exists():
-        log.error("no %s; run `select` first", ACTIVE_PROMPTS)
+    if args.prompts:
+        # read-only: checking a prompt file never touches active_prompts.json
+        prompts = [{"prompt": c.prompt, "cluster": c.cluster, "source": c.source}
+                   for c in load_prompt_file(Path(args.prompts), load_clusters())]
+    elif not ACTIVE_PROMPTS.exists():
+        log.error("no %s; run `select` first, or pass --prompts", ACTIVE_PROMPTS)
         return 1
-    prompts = json.loads(ACTIVE_PROMPTS.read_text())
+    else:
+        prompts = json.loads(ACTIVE_PROMPTS.read_text())
     devices = resolve_devices(args, settings)
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     planned = len(prompts) * len(devices)
@@ -263,6 +268,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     c = sub.add_parser("check", help="check active prompts once")
     c.add_argument("--save-raw", action="store_true", help="save raw SERP JSON under runs/")
+    c.add_argument("--prompts", help="CSV (prompt, cluster) to check instead of runs/active_prompts.json, "
+                                     "which is left untouched")
 
     for sp in (s, c):
         sp.add_argument("--dry-run", action="store_true", help="write CSVs under runs/, not Sheets")
