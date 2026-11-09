@@ -27,3 +27,10 @@ def test_raw_gsc_export_headers(tmp_path):
     p.write_text('Top queries,Clicks,Impressions,CTR,Position\n"GenAI Course Fees",3,"1,200",0.2%,8.1\nzero,0,0,0%,1\n')
     rows = load_gsc(p, load_clusters())
     assert len(rows) == 1 and rows[0].query == "genai course fees" and rows[0].impressions == 1200
+
+
+def test_gsc_query_whitespace_collapsed(tmp_path):
+    p = tmp_path / "gsc.csv"
+    p.write_text('query,impressions\n"which genai program best prepares you for an engineering \nrole?",40\n')
+    rows = load_gsc(p, load_clusters())
+    assert rows[0].query == "which genai program best prepares you for an engineering role?"

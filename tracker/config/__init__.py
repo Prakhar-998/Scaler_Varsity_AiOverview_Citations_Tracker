@@ -122,7 +122,7 @@ def load_gsc(path: Path, clusters: List[Cluster]) -> List[GscQuery]:
     rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
-            q = _pick(row, "query", "top queries", "queries")
+            q = " ".join(_pick(row, "query", "top queries", "queries").split())  # GSC can include newlines
             imp = _to_int(_pick(row, "impressions"))
             if q and imp > 0:
                 rows.append(GscQuery(q.lower(), imp, assign_cluster(q, clusters)))
