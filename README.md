@@ -99,6 +99,16 @@ are only partly matched for now (see "Mobile references" in `docs/decisions.md`)
   - If every model fails, `select` logs a warning and carries on with GSC candidates only.
 - **both** (default): GSC candidates go first, so a search found by both sources keeps its GSC
   version and is noted "also from llm".
+- **none**: only the `--prompts` file.
+
+`--prompts <csv>` adds candidates from a file, with no drafting. It needs the columns `prompt` and
+`cluster`; `source` and `intent` are optional, and `source` defaults to `manual`. It works for a
+saved `candidates.csv` or a hand-made list. These candidates still go through dedupe, the probe
+filter and scoring, and the flag combines with any `--source`.
+
+Drafted LLM candidates are written to `runs/<run>/candidates.csv` per blog as they are drafted,
+before any probe SERP call. If a run stops, re-use them without drafting again:
+`select --source gsc --prompts runs/<run>/candidates.csv ...` gives the same result as `both`.
 
 ## Run
 
@@ -122,10 +132,80 @@ are only partly matched for now (see "Mobile references" in `docs/decisions.md`)
 # check both devices this run, or probe through SERPHouse instead of DataForSEO
 .venv/bin/python -m tracker check --dry-run --device desktop --device mobile
 .venv/bin/python -m tracker probe --provider serphouse "forward deployed engineer salary in india"
+
+# end-to-end test on a small prompt file; runs/active_prompts.json is left untouched
+.venv/bin/python -m tracker check --prompts data/private/test_prompts.csv --dry-run --max-cost 0.05
 ```
 
 Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to `runs/dry-run-*/`.
 `--max-serp-calls` caps SERP calls per run (default in `config/settings.yaml`; retries count).
+`check --max-cost <usd>` exits with code 3 before any SERP call if the estimate is over the limit.
+
+## Scheduled daily run
+
+`scripts/daily_run.sh` runs `select --source both` (SERPHouse probes) and then, only if at least
+10 prompts are active, `check` on DataForSEO, as dry runs.
+- **Logs:** `runs/logs/<date>.log`.
+- **Stops:** on the first error, with a non-zero exit code.
+- **Cost cap:** `check` aborts if its cost estimate is over $0.40.
+- **Exit codes:** 0 ok, 3 over the cost cap, 4 fewer than 10 active prompts, anything else a
+  failed step.
+
+Providers are passed explicitly, so a `SERP_PROVIDER` line in `.env` can't swap them.
+
+It is scheduled with a LaunchAgent that is not in the repo:
+`~/Library/LaunchAgents/com.prakhar.citationtracker.plist`. It runs the script at 05:45 local
+time, after the OpenRouter free quota resets at 05:30 IST, and writes stdout/stderr to
+`runs/logs/launchd.log`. It is **one-shot**: the plist sets `CITATION_TRACKER_ONE_SHOT=1`, and the
+script then disables and unloads the agent when it finishes, so it doesn't repeat (even after a
+reboot) until it is loaded again.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.prakhar.citationtracker</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/prakharjaiswal/Citation_Tracker/scripts/daily_run.sh</string>
+    </array>
+    <key>WorkingDirectory</key><string>/Users/prakharjaiswal/Citation_Tracker</string>
+    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>45</integer></dict>
+    <key>EnvironmentVariables</key>
+    <dict><key>CITATION_TRACKER_ONE_SHOT</key><string>1</string></dict>
+    <key>StandardOutPath</key><string>/Users/prakharjaiswal/Citation_Tracker/runs/logs/launchd.log</string>
+    <key>StandardErrorPath</key><string>/Users/prakharjaiswal/Citation_Tracker/runs/logs/launchd.log</string>
+    <key>RunAtLoad</key><false/>
+</dict>
+</plist>
+```
+
+```bash
+mkdir -p runs/logs                      # launchd won't create the log folder
+# load (also re-arms it after a one-shot run, which disables it)
+launchctl enable gui/$(id -u)/com.prakhar.citationtracker
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.prakhar.citationtracker.plist
+# check it's loaded
+launchctl list | grep citationtracker   # "-  0  com.prakhar.citationtracker" = loaded, not running
+# unload
+launchctl bootout gui/$(id -u)/com.prakhar.citationtracker
+```
+
+For the run to happen:
+- You must be **logged in**. A LaunchAgent runs in your user session.
+- The Mac must **not be shut down**.
+- If it is **asleep** at 05:45, launchd runs the job when the Mac next wakes, not at 05:45.
+- Keep it **plugged in**: a laptop on battery with the lid closed may not wake for long.
+
+To wake it just before the run (one-off, for tomorrow):
+
+```bash
+sudo pmset schedule wake "11/10/2026 05:40:00"
+pmset -g sched                          # confirm; cancel with: sudo pmset schedule cancelall
+```
 
 ## Output
 

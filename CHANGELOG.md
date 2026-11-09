@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- `select` writes drafted LLM candidates to `runs/<run>/candidates.csv` per blog as they are
+  drafted, before any probe SERP call.
+- `select --prompts <csv>` loads candidates from a file (`prompt`, `cluster`; optional `source`,
+  `intent`; source defaults to `manual`) without drafting. It combines with any `--source`, and
+  `--source none` uses only the file. `--gsc` is optional with `--source none`.
+- `check --prompts <csv>` checks a prompt file directly, without reading or writing
+  `runs/active_prompts.json`.
+- `check --max-cost <usd>` aborts with exit code 3 before any SERP call if the estimate is over.
+- `scripts/daily_run.sh`: select, then check if at least 10 prompts are active. It logs to
+  `runs/logs/<date>.log` and caps check cost at $0.40. The README documents a one-shot LaunchAgent
+  for 05:45.
 - `devices` setting (default `[desktop]`) and a repeatable `--device desktop|mobile` flag. `check`
   runs every prompt once per device. Checks gets a `device` column after `cluster`, and the Summary
   is broken down by device.

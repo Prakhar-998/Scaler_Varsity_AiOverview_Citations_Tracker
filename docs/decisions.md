@@ -220,3 +220,32 @@ gets its real position. They are left out of competing domains rather than count
 **V1:** match opaque references by title against `blogs.csv` (rapidfuzz, with a threshold tuned on
 real captures) and by `source` for brand. Record the match level as `url` / `title` / `source`,
 the same way `rank match` does.
+
+## Candidates saved before probing; manual prompt import
+**Why:** LLM drafting is the scarce step. The OpenRouter free quota runs out mid-run and resets
+at 05:30 IST. Probes come after drafting, and a run can fail or be stopped there (a SERP budget
+hit, a provider error, Ctrl-C). Before this change, the drafts only lived in memory until the
+Prompts tab was written at the very end, so any stop after drafting threw away a day's quota.
+
+**Decisions:**
+- **Save as drafted.** Each blog's drafts are appended to `runs/<run>/candidates.csv` the moment
+  they come back, before any probe. A crash mid-drafting keeps every blog drafted so far.
+  Only LLM drafts are saved. GSC candidates are rebuilt from the export for free, so
+  `--source gsc --prompts candidates.csv` reproduces `--source both` without the LLM.
+- **One file format** for saved candidates and hand-made prompts: `prompt, cluster`, plus optional
+  `source` and `intent`. Manual prompts are tagged `source = manual`, so they stay visible in the
+  Prompts tab. They get no free pass: dedupe, the GSC-or-probe filter and scoring apply exactly
+  as for drafted ones, so a manual prompt Google shows no AI Overview for is still dropped.
+- **`check --prompts`** checks a file without reading or writing `runs/active_prompts.json`.
+  Test runs ("do 5 checks work end to end?") then can't overwrite the real prompt set.
+- **`check --max-cost`** turns the logged estimate into a hard stop. The daily script uses $0.40
+  (50 prompts × 1 device × $0.004 = $0.20, with headroom for retries) against a ~$1 credit.
+
+**End-to-end test (2026-11-09):** 5 prompts from `data/private/test_prompts.csv`, DataForSEO
+desktop:
+- 4 `ok` (all 4 FDE prompts) and 1 `no_aio` ("best generative ai course in india").
+- Varsity was cited once, at position 5, for "fde course fees"
+  (`/varsity/blog/forward-deployed-engineer-course-fees-in-india/`), with a domain-level organic
+  rank of 6.
+- Billed $0.012 against a $0.02 estimate. The estimate is an upper bound.
+- `runs/active_prompts.json` was unchanged.
