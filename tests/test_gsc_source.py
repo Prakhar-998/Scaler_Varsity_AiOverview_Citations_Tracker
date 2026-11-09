@@ -68,3 +68,4 @@ def test_programs_yaml_has_brand_rules():
     rules = load_brand_rules()
     assert "scaler" in rules.brand_terms and "interviewbit" in rules.brand_terms
     assert "fde academy" in rules.competitors
+    assert rules.competitor("fde.academy fees") == "fde.academy"  # spelling seen in real GSC data

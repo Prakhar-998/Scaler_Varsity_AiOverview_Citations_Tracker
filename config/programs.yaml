@@ -20,6 +20,7 @@ brand_terms: ["scaler", "interviewbit", "interview bit", "varsity"]
 # Starter list; review it against the competing domains seen in Checks.
 competitors:
   - fde academy
+  - fde.academy
   - upgrad
   - simplilearn
   - great learning
