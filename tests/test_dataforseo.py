@@ -93,6 +93,8 @@ def test_real_mobile_references_keep_source_and_title_for_goto_links(load_fixtur
     assert len(goto) == 4
     assert [r.source for r in goto] == ["Reddit", "Arivu Skills", "AmbitionBox", "www.glassdoor.co.in"]
     assert all(r.title for r in goto)
+    # opaque links aren't reported as a "google.com" competitor
+    assert match_citations(result).competing_domains == ["arivuskills.com", "glassdoor.co.in"]
 
 
 def test_real_organic_urls_are_redirects_so_site_comes_from_breadcrumb(load_fixture):

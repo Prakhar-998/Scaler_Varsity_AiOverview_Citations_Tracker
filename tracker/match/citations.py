@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from tracker.checks.base import SerpResult
 
-from .urls import domain_of, normalise_url, unwrap_google_redirect
+from .urls import domain_of, is_google_redirect, normalise_url, unwrap_google_redirect
 
 VARSITY_PREFIX = "interviewbit.com/varsity/blog/"
 VARSITY_DOMAIN = VARSITY_PREFIX.split("/", 1)[0]
@@ -53,6 +53,10 @@ def match_citations(result: SerpResult) -> CitationMatch:
         elif is_brand(ref.url):
             m.brand_cited = True
             m.brand_urls.append(ref.url)
+        elif is_google_redirect(ref.url) and unwrap_google_redirect(ref.url) is None:
+            # opaque mobile google.com/goto link: the real domain is unknown, so it is not
+            # counted as "google.com" (matching by source/title is the V1 mobile follow-up)
+            continue
         else:
             d = domain_of(ref.url)
             if d and d not in m.competing_domains:
