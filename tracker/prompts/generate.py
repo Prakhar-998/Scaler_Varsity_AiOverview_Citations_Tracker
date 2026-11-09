@@ -46,7 +46,9 @@ class Candidate:
     intent: str = "other"
     intent_weight: float = OTHER_INTENT_WEIGHT
     source: str = "llm"        # "llm" (drafted per blog) or "gsc" (real GSC query)
-    competitor: bool = False   # names a competitor brand, e.g. "fde academy course fees"
+    # "competitor": names a competitor ("fde academy course fees")
+    # "brand_comparison": our brand compared with another ("scaler vs fde academy")
+    brand_tag: str = ""
     impressions: int = 0       # GSC impressions, for gsc-sourced candidates
     pre_drop: str = ""         # reason the source already rejected it; select_prompts logs it as dropped
 

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK, SerpResult
 from tracker.match import CitationMatch
 
-PROMPT_HEADERS = ["prompt", "cluster", "source", "competitor", "intent", "score", "status", "reason",
+PROMPT_HEADERS = ["prompt", "cluster", "source", "brand tag", "intent", "score", "status", "reason",
                   "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
@@ -20,7 +20,7 @@ SUMMARY_HEADERS = ["cluster", "checks", "ok", "incomplete", "no_aio", "failed", 
 
 def prompt_row(d) -> List:
     c = d.candidate
-    return [c.prompt, c.cluster, c.source, _yn(c.competitor), c.intent, d.score, d.status, d.reason,
+    return [c.prompt, c.cluster, c.source, c.brand_tag, c.intent, d.score, d.status, d.reason,
             "; ".join(d.sources)]
 
 

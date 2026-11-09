@@ -81,11 +81,11 @@ def test_csv_writer_appends(tmp_path):
     assert len(w.read_checks()) == 2
 
 
-def test_prompt_row_has_source_and_competitor():
+def test_prompt_row_has_source_and_brand_tag():
     from tracker.output import PROMPT_HEADERS, prompt_row
     from tracker.prompts import Candidate, Decision
 
-    d = Decision(candidate=Candidate("fde academy course fees", "fde", "", source="gsc", competitor=True),
+    d = Decision(candidate=Candidate("fde academy course fees", "fde", "", source="gsc", brand_tag="competitor"),
                  status="active", reason="kept: GSC match", sources=["gsc: fde academy course fees (800 impr)"])
     row = dict(zip(PROMPT_HEADERS, prompt_row(d)))
-    assert row["source"] == "gsc" and row["competitor"] == "yes"
+    assert row["source"] == "gsc" and row["brand tag"] == "competitor"

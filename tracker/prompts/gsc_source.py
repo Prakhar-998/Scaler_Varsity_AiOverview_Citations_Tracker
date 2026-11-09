@@ -16,6 +16,10 @@ log = logging.getLogger(__name__)
 BOFU_TERMS = ("best", "top", "course", "courses", "fees", "fee", "cost", "price", "vs", "versus", "worth",
               "certification", "certificate", "salary", "training", "program", "programme", "institute",
               "online", "review", "reviews", "compare", "which", "near me")
+# Markers that turn an own-brand query into a comparison. "which" and a bare "or" are left out:
+# "which scaler program is best" chooses between our own programs.
+_COMPARISON_RE = re.compile(r"(?<![a-z0-9])(vs\.?|versus|compared?|comparison|better than|alternatives?|"
+                            r"difference between)(?![a-z0-9])")
 _BOFU_RE = re.compile(r"(?<![a-z0-9])(" + "|".join(re.escape(t) for t in BOFU_TERMS) + r")(?![a-z0-9])")
 
 
@@ -25,22 +29,30 @@ def bofu_term(query: str) -> str:
 
 
 def tag_brands(candidates: List[Candidate], rules: BrandRules) -> None:
-    """Mark own-brand candidates for dropping and tag competitor-brand ones. Works for any source."""
+    """Tag brand-related candidates. Works for any source.
+
+    own brand + competitor or comparison marker -> kept, brand_tag "brand_comparison"
+    own brand only (navigational: login, contact, "scaler reviews", "interviewbit varsity") -> dropped
+    competitor only -> kept, brand_tag "competitor"
+    """
     for c in candidates:
         if c.pre_drop:
             continue
         own = rules.brand(c.prompt)
-        if own:
-            c.pre_drop = f"branded query ('{own}')"
-        elif rules.competitor(c.prompt):
-            c.competitor = True
+        rival = rules.competitor(c.prompt)
+        if own and (rival or _COMPARISON_RE.search(c.prompt.lower())):
+            c.brand_tag = "brand_comparison"
+        elif own:
+            c.pre_drop = f"navigational / pure brand query ('{own}')"
+        elif rival:
+            c.brand_tag = "competitor"
 
 
 def gsc_candidates(gsc: List[GscQuery], clusters: List[Cluster], rules: BrandRules,
                    dedupe_threshold: float = 90) -> List[Candidate]:
     """Queries in an active cluster that carry a BOFU term, ranked by impressions.
 
-    Branded and near-duplicate queries are returned with `pre_drop` set so they are logged as
+    Navigational own-brand and near-duplicate queries are returned with `pre_drop` set so they are logged as
     dropped with a reason. Queries outside a cluster or without a BOFU term are not candidates.
     """
     active = {c.key for c in clusters}
@@ -62,5 +74,6 @@ def gsc_candidates(gsc: List[GscQuery], clusters: List[Cluster], rules: BrandRul
         else:
             kept.append(c)
     log.info("GSC source: %d of %d queries in active clusters with a BOFU term; %d kept after brand "
-             "filter and dedupe (%d competitor)", len(pool), len(gsc), len(kept), sum(c.competitor for c in kept))
+             "filter and dedupe (%d competitor, %d brand_comparison)", len(pool), len(gsc), len(kept),
+             sum(c.brand_tag == "competitor" for c in kept), sum(c.brand_tag == "brand_comparison" for c in kept))
     return out
