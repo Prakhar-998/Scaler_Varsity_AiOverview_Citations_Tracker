@@ -66,3 +66,23 @@ def test_organic_rank_recorded_without_full_aio():
         d = dict(zip(CHECK_HEADERS, r))
         assert d["organic rank"] == 3 and d["rank match"] == "url"
         assert d["varsity cited"] == ""  # still unknown / not applicable
+
+
+def test_select_reports_missing_gemini_model_without_traceback(tmp_path, monkeypatch, caplog):
+    from tracker.prompts import GeminiModelNotFound
+
+    class Drafter:
+        def __init__(self, *a, **k):
+            pass
+
+        def draft(self, blog, cluster, n):
+            raise GeminiModelNotFound("gemini-2.5-flash", "no longer available")
+
+    monkeypatch.setattr(cli, "GeminiDrafter", Drafter)
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    root = cli.ROOT / "data/sample"
+    code = cli.main(["--provider", "fake", "select", "--blogs", str(root / "blogs.csv"),
+                     "--gsc", str(root / "gsc.csv"), "--dry-run"])
+    assert code == 2
+    assert "gemini-2.5-flash" in caplog.text and "GEMINI_MODEL" in caplog.text
+    assert "Traceback" not in caplog.text

@@ -68,6 +68,19 @@ def parse_searches(text: str) -> List[str]:
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 
 
+class GeminiModelNotFound(RuntimeError):
+    """The configured Gemini model returned 404 (retired, misspelled, or not enabled for this key)."""
+
+    def __init__(self, model: str, detail: str = ""):
+        self.model = model
+        msg = f"Gemini model '{model}' returned 404 (not found or no longer available)."
+        detail = detail.strip()
+        if detail:
+            msg += f" Gemini said: {detail}" + ("" if detail.endswith((".", "!", "?")) else ".")
+        msg += " Set GEMINI_MODEL in .env, or gemini_model in config/settings.yaml, to an available model."
+        super().__init__(msg)
+
+
 def resolve_gemini_model(settings: Dict) -> str:
     """GEMINI_MODEL env var, then gemini_model in settings.yaml, then the default."""
     return os.environ.get("GEMINI_MODEL", "").strip() or settings.get("gemini_model") or DEFAULT_GEMINI_MODEL
@@ -84,9 +97,16 @@ class GeminiDrafter:
 
     def draft(self, blog: Blog, cluster: Cluster, n: int) -> List[str]:
         prompt = PROMPT_TEMPLATE.format(cluster=cluster.name, title=blog.title, keyword=blog.primary_keyword, n=n)
-        resp = self.client.models.generate_content(
-            model=self.model, contents=prompt, config={"response_mime_type": "application/json"}
-        )
+        from google.genai import errors
+
+        try:
+            resp = self.client.models.generate_content(
+                model=self.model, contents=prompt, config={"response_mime_type": "application/json"}
+            )
+        except errors.ClientError as exc:
+            if exc.code == 404:
+                raise GeminiModelNotFound(self.model, exc.message or "") from exc
+            raise
         return parse_searches(resp.text or "")
 
 
