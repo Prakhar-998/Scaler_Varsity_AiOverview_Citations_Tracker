@@ -5,7 +5,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from tracker.config import Blog, Cluster
 from tracker.llm import AllLLMsFailed, LLMChain
@@ -95,9 +95,11 @@ class LLMDrafter:
         return parse_searches(text), label
 
 
-def draft_candidates(blogs: List[Blog], clusters: List[Cluster], drafter, per_blog: int) -> List[Candidate]:
+def draft_candidates(blogs: List[Blog], clusters: List[Cluster], drafter, per_blog: int,
+                     on_drafted: Optional[Callable[[List[Candidate]], None]] = None) -> List[Candidate]:
     """Draft for every blog in an active cluster. If every LLM option fails, log a warning and
-    return what was drafted so far; the caller carries on with GSC candidates."""
+    return what was drafted so far; the caller carries on with GSC candidates.
+    `on_drafted` gets each blog's new candidates as soon as they exist (select saves them to disk)."""
     by_key: Dict[str, Cluster] = {c.key: c for c in clusters}
     todo = [(b, by_key[b.cluster]) for b in blogs if b.cluster in by_key]
     out: List[Candidate] = []
@@ -115,5 +117,7 @@ def draft_candidates(blogs: List[Blog], clusters: List[Cluster], drafter, per_bl
                 continue
             intent, weight = classify_intent(prompt)
             out.append(Candidate(prompt, cluster.key, blog.title, intent, weight, source="llm"))
+        if on_drafted is not None:
+            on_drafted(out[before:])
         log.info("drafting %d/%d via %s: %s -> %d candidates", i, len(todo), label, blog.title, len(out) - before)
     return out

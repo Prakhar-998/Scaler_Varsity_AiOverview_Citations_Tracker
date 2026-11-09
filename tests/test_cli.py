@@ -279,3 +279,25 @@ def test_check_logs_estimated_cost(tmp_path, monkeypatch, caplog):
         code, _, _ = _check(tmp_path, monkeypatch)
     assert code == 0
     assert "estimated cost: 4 checks x $0.004 = $0.02 on fake" in caplog.text  # 2 prompts x 2 devices
+
+
+def test_drafted_candidates_saved_before_any_probe(tmp_path, monkeypatch):
+    seen_on_disk = []
+
+    class Drafter:
+        def draft(self, blog, cluster, n):
+            return ["best generative ai course for working professionals", "genai course fees in india"], "fake:m"
+
+    class Provider(FakeProvider):
+        def fetch_ai_overview(self, query, retry_incomplete=True):
+            files = list(tmp_path.glob("dry-run-*/candidates.csv"))
+            seen_on_disk.append(len(list(csv.DictReader(open(files[0])))) if files else 0)
+            return super().fetch_ai_overview(query, retry_incomplete)
+
+    monkeypatch.setattr(cli, "make_drafter", lambda settings: Drafter())
+    monkeypatch.setattr(cli, "get_provider", lambda name, budget, device="mobile": Provider(budget=budget))
+    code, _ = _select(tmp_path, monkeypatch, "--source", "llm")
+    assert code == 0 and seen_on_disk and seen_on_disk[0] == 4  # 2 blogs x 2 drafts, on disk before probe 1
+    rows = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*/candidates.csv")))))
+    assert rows[0] == {"prompt": "best generative ai course for working professionals", "cluster": "fde",
+                       "source": "llm", "intent": "best", "source blog": rows[0]["source blog"]}

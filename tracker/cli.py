@@ -25,7 +25,8 @@ from tracker.config import ROOT, load_blogs, load_brand_rules, load_clusters, lo
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
 from tracker.llm import build_chain
-from tracker.prompts import ACTIVE, LLMDrafter, draft_candidates, gsc_candidates, select_prompts, tag_brands
+from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, select_prompts,
+                             tag_brands)
 
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
@@ -44,9 +45,14 @@ def load_dotenv(path: Path = ROOT / ".env") -> None:
             os.environ.setdefault(key.strip(), value.strip().strip("'\""))
 
 
+def run_dir(dry_run: bool, stamp: str) -> Path:
+    """Per-run folder under runs/: the dry-run CSVs and select's candidates.csv go here."""
+    return RUNS / f"{'dry-run' if dry_run else 'run'}-{stamp}"
+
+
 def make_writer(dry_run: bool, stamp: str):
     if dry_run:
-        out = RUNS / f"dry-run-{stamp}"
+        out = run_dir(dry_run, stamp)
         log.info("dry run: writing CSVs to %s instead of Sheets", out)
         return CsvWriter(out)
     return SheetsWriter(os.environ.get("SHEET_ID", ""), os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""))
@@ -109,6 +115,7 @@ def cmd_select(args, settings) -> int:
     rules = load_brand_rules()
     gsc = load_gsc(Path(args.gsc), clusters)
     log.info("source: %s; %d GSC queries", args.source, len(gsc))
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # GSC first, so when both sources produce the same search the GSC version is the one kept
     candidates = []
@@ -123,7 +130,11 @@ def cmd_select(args, settings) -> int:
         drafted = []
         drafter = make_drafter(settings)
         if drafter is not None:
-            drafted = draft_candidates(blogs, clusters, drafter, int(settings.get("candidates_per_blog", 4)))
+            # saved per blog as drafted, before any probe SERP calls, so an interrupted run keeps them
+            saved = CandidateLog(run_dir(args.dry_run, stamp) / "candidates.csv")
+            log.info("saving drafted candidates to %s", saved.path)
+            drafted = draft_candidates(blogs, clusters, drafter, int(settings.get("candidates_per_blog", 4)),
+                                       on_drafted=saved.add)
         tag_brands(drafted, rules)
         log.info("%d LLM candidates drafted", len(drafted))
         if not drafted and args.source == "both":
@@ -141,7 +152,6 @@ def cmd_select(args, settings) -> int:
     ACTIVE_PROMPTS.write_text(json.dumps(
         [{"prompt": d.prompt, "cluster": d.candidate.cluster, "source": d.candidate.source} for d in kept],
         indent=2))
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     make_writer(args.dry_run, stamp).write_prompts([prompt_row(d) for d in decisions])
     return 0
 
