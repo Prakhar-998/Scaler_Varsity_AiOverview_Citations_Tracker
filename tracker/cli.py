@@ -146,6 +146,14 @@ def cmd_select(args, settings) -> int:
     return 0
 
 
+def log_cost_estimate(provider: str, checks: int, settings) -> None:
+    rate = (settings.get("cost_per_check_usd") or {}).get(provider)
+    if rate is None:
+        return
+    log.info("estimated cost: %d checks x $%.3f = $%.2f on %s (retries cost extra)",
+             checks, float(rate), checks * float(rate), provider)
+
+
 def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None):
     """One check per prompt on the provider's device. Stops with a warning if the budget runs out."""
     rows = []
@@ -177,6 +185,7 @@ def cmd_check(args, settings) -> int:
         log.warning("%d checks (%d prompts x %d devices) but budget is %d calls; later checks will be skipped",
                     planned, len(prompts), len(devices), budget.max_calls)
     providers = [make_provider(args, settings, budget, d) for d in devices]
+    log_cost_estimate(providers[0].name, planned, settings)
     now = datetime.now()
     stamp = now.strftime("%Y%m%d-%H%M%S")
     raw_dir = None

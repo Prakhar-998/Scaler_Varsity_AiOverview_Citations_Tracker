@@ -10,6 +10,9 @@ serp_provider:
   select: serphouse
   check: dataforseo
   probe: dataforseo
+# USD per SERP call, for the cost estimate logged at the start of each check run
+cost_per_check_usd:
+  dataforseo: 0.004   # live/advanced + load_async_ai_overview, as charged on 2026-11-09
 # Prompt layer
 candidates_per_blog: 4
 keep_top: 50

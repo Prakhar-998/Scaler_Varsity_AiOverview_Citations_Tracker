@@ -268,3 +268,14 @@ def test_serp_provider_env_overrides_the_default_with_a_warning(monkeypatch, cap
     args = cli.build_parser().parse_args(["check"])
     assert cli.provider_name(args, cli.load_settings()) == "serphouse"
     assert "SERP_PROVIDER=serphouse overrides the check default (dataforseo)" in caplog.text
+
+
+def test_check_logs_estimated_cost(tmp_path, monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop", "mobile"],
+                                                      "cost_per_check_usd": {"fake": 0.004}})
+    with caplog.at_level(logging.INFO):
+        code, _, _ = _check(tmp_path, monkeypatch)
+    assert code == 0
+    assert "estimated cost: 4 checks x $0.004 = $0.02 on fake" in caplog.text  # 2 prompts x 2 devices
