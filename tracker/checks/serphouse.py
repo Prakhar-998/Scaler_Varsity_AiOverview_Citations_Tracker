@@ -40,7 +40,7 @@ DEFAULT_PARAMS = {
     "domain": "google.com",
     "loc": "India",
     "lang": "en",
-    "device": "mobile",
+    "device": "mobile",  # overridden per provider instance
     "serp_type": "web",
     "tbs": "",  # must be sent: clears SERPHouse's default Verbatim mode (tbs=li:1)
 }
@@ -52,6 +52,7 @@ class SerphouseProvider(SerpProvider):
         self,
         api_key: str,
         budget: Optional[CallBudget] = None,
+        device: str = "mobile",
         session: Optional[requests.Session] = None,
         retries: int = 2,
         timeout: float = 60.0,
@@ -63,6 +64,7 @@ class SerphouseProvider(SerpProvider):
             raise ValueError("SERPHOUSE_API_KEY is not set")
         self.api_key = api_key
         self.budget = budget
+        self.device = device
         self.session = session or requests.Session()
         self.retries = retries
         self.timeout = timeout
@@ -88,7 +90,7 @@ class SerphouseProvider(SerpProvider):
 
     def _fetch(self, query: str) -> SerpResult:
         """One logical request, with retries for network errors, 429 and 5xx."""
-        payload = {"data": dict(DEFAULT_PARAMS, q=query)}
+        payload = {"data": dict(DEFAULT_PARAMS, q=query, device=self.device)}
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
         last_error = "unknown error"
         for attempt in range(self.retries + 1):

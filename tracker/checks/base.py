@@ -76,10 +76,15 @@ class SerpResult:
         return cls(query=query, status=STATUS_FAILED, error=error, raw=raw)
 
 
+DEVICES = ("desktop", "mobile")
+
+
 class SerpProvider:
-    """Adapter interface. Settings are fixed for the prototype: google.com, India, English, mobile."""
+    """Adapter interface. Fixed for the prototype: google.com, India, English. Each provider instance
+    fetches for one device (`device`, from the `devices` setting or --device)."""
 
     name = "base"
+    device = "mobile"
 
     def fetch_ai_overview(self, query: str, retry_incomplete: bool = True) -> SerpResult:
         """`retry_incomplete=False` skips the late-load retry, e.g. for select probes, where an

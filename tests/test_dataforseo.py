@@ -67,6 +67,12 @@ def test_request_body_and_auth(load_fixture):
                              "device": "mobile", "load_async_ai_overview": True}]
 
 
+def test_device_is_sent_per_provider(load_fixture):
+    session = FakeSession([FakeResponse(body=load_fixture(AIO))])
+    DataForSeoProvider("l", "p", session=session, device="desktop").fetch_ai_overview("q")
+    assert session.calls[0]["json"][0]["device"] == "desktop"
+
+
 def test_real_desktop_sources_list_then_inline_citations(load_fixture):
     result = parse_response("forward deployed engineer salary in india", load_fixture(DESKTOP))
     assert result.status == STATUS_OK and result.shown

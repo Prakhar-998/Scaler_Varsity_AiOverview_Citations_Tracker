@@ -1,5 +1,8 @@
 # Cost guard: hard cap on SERP calls in one run (retries count).
 max_serp_calls: 300
+# Devices to check (desktop, mobile). `check` runs every prompt once per device; `select` probes and
+# `probe` use the first. --device overrides this per run.
+devices: [desktop]
 # Prompt layer
 candidates_per_blog: 4
 keep_top: 50

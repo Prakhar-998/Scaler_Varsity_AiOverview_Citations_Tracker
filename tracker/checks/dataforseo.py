@@ -46,7 +46,7 @@ OK_CODE = 20000
 DEFAULT_PARAMS = {
     "location_code": 2356,  # India
     "language_code": "en",
-    "device": "mobile",
+    "device": "mobile",  # overridden per provider instance
     "load_async_ai_overview": True,  # wait for AI Overviews that load late
 }
 
@@ -59,6 +59,7 @@ class DataForSeoProvider(SerpProvider):
         login: str,
         password: str,
         budget: Optional[CallBudget] = None,
+        device: str = "mobile",
         session: Optional[requests.Session] = None,
         retries: int = 2,
         timeout: float = 120.0,
@@ -70,6 +71,7 @@ class DataForSeoProvider(SerpProvider):
             raise ValueError("DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD must be set")
         self.auth = (login, password)
         self.budget = budget
+        self.device = device
         self.session = session or requests.Session()
         self.retries = retries
         self.timeout = timeout
@@ -95,7 +97,7 @@ class DataForSeoProvider(SerpProvider):
 
     def _fetch(self, query: str) -> SerpResult:
         """One logical request, with retries for network errors, 429 and 5xx."""
-        payload = [dict(DEFAULT_PARAMS, keyword=query)]
+        payload = [dict(DEFAULT_PARAMS, keyword=query, device=self.device)]
         headers = {"Accept": "application/json"}
         last_error = "unknown error"
         for attempt in range(self.retries + 1):

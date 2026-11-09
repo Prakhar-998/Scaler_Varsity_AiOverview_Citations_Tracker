@@ -9,9 +9,11 @@ from .base import STATUS_NO_AIO, CallBudget, SerpProvider, SerpResult
 class FakeProvider(SerpProvider):
     name = "fake"
 
-    def __init__(self, responses: Optional[Dict[str, SerpResult]] = None, budget: Optional[CallBudget] = None):
+    def __init__(self, responses: Optional[Dict[str, SerpResult]] = None, budget: Optional[CallBudget] = None,
+                 device: str = "mobile"):
         self.responses = responses or {}
         self.budget = budget
+        self.device = device
         self.calls = []
         self.retry_flags = []
 

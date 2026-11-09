@@ -4,7 +4,8 @@
   python -m tracker check [--dry-run] [--save-raw]      # run twice a day at different times
   python -m tracker probe "best generative ai course in india"   # one SERP call, for spot checks
 
-Every command takes --provider serphouse|dataforseo|fake (default: SERP_PROVIDER, else serphouse).
+Every command takes --provider serphouse|dataforseo|fake (default: SERP_PROVIDER, else serphouse)
+and --device desktop|mobile (repeatable; default: `devices` in config/settings.yaml).
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from tracker.checks import BudgetExceeded, CallBudget, get_provider
+from tracker.checks import DEVICES, BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, SerpResult
 from tracker.config import ROOT, load_blogs, load_brand_rules, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
@@ -51,16 +52,29 @@ def make_writer(dry_run: bool, stamp: str):
 
 
 class ProviderError(Exception):
-    """The chosen SERP provider can't be built (unknown name or missing credentials)."""
+    """The chosen SERP provider can't be built (unknown name, device or missing credentials)."""
 
 
-def make_provider(args, budget: CallBudget):
+def resolve_devices(args, settings) -> List[str]:
+    """--device (repeatable) wins over `devices` in settings.yaml; duplicates are dropped."""
+    devices = args.device or settings.get("devices") or ["mobile"]
+    if isinstance(devices, str):
+        devices = [devices]
+    devices = list(dict.fromkeys(str(d).lower() for d in devices))
+    bad = [d for d in devices if d not in DEVICES]
+    if bad:
+        raise ProviderError(f"unknown device(s) {', '.join(bad)} in settings.yaml devices; "
+                            f"use {', '.join(DEVICES)}")
+    return devices
+
+
+def make_provider(args, budget: CallBudget, device: str = "mobile"):
     name = (args.provider or os.environ.get("SERP_PROVIDER") or "serphouse").lower()
     try:
-        provider = get_provider(name, budget)
+        provider = get_provider(name, budget, device=device)
     except ValueError as exc:
         raise ProviderError(f"SERP provider {name!r}: {exc}") from None
-    log.info("SERP provider: %s", provider.name)
+    log.info("SERP provider: %s (%s)", provider.name, device)
     return provider
 
 
@@ -104,7 +118,8 @@ def cmd_select(args, settings) -> int:
         candidates += drafted
 
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
-    provider = None if args.no_probe else make_provider(args, budget)
+    # probes only ask "is an AI Overview shown?", so one device is enough: the first configured
+    provider = None if args.no_probe else make_provider(args, budget, resolve_devices(args, settings)[0])
     decisions = select_prompts(candidates, gsc, clusters, provider, settings)
     kept = [d for d in decisions if d.status == ACTIVE]
     log.info("kept %d of %d candidates; %d probe SERP calls", len(kept), len(decisions), budget.used)
@@ -119,18 +134,21 @@ def cmd_select(args, settings) -> int:
 
 
 def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None):
+    """One check per prompt on the provider's device. Stops with a warning if the budget runs out."""
     rows = []
+    device = provider.device
     for i, p in enumerate(prompts):
         try:
             result = provider.fetch_ai_overview(p["prompt"])
         except BudgetExceeded:
-            log.warning("SERP budget used up after %d of %d prompts", i, len(prompts))
+            log.warning("SERP budget used up after %d of %d prompts (%s)", i, len(prompts), device)
             break
         if raw_dir is not None and result.raw is not None:
-            (raw_dir / f"{i:03d}.json").write_text(json.dumps({"query": p["prompt"], "body": result.raw}, indent=2))
+            (raw_dir / f"{device}-{i:03d}.json").write_text(
+                json.dumps({"query": p["prompt"], "device": device, "body": result.raw}, indent=2))
         # organic rank is independent of the AI Overview, so match every non-failed check
         m = match_citations(result) if result.status != STATUS_FAILED else None
-        rows.append(check_row(when, p["prompt"], p["cluster"], result, m))
+        rows.append(check_row(when, p["prompt"], p["cluster"], result, m, device=device))
     return rows
 
 
@@ -139,10 +157,13 @@ def cmd_check(args, settings) -> int:
         log.error("no %s; run `select` first", ACTIVE_PROMPTS)
         return 1
     prompts = json.loads(ACTIVE_PROMPTS.read_text())
+    devices = resolve_devices(args, settings)
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
-    if len(prompts) > budget.max_calls:
-        log.warning("%d prompts but budget is %d calls; later prompts will be skipped", len(prompts), budget.max_calls)
-    provider = make_provider(args, budget)
+    planned = len(prompts) * len(devices)
+    if planned > budget.max_calls:
+        log.warning("%d checks (%d prompts x %d devices) but budget is %d calls; later checks will be skipped",
+                    planned, len(prompts), len(devices), budget.max_calls)
+    providers = [make_provider(args, budget, d) for d in devices]
     now = datetime.now()
     stamp = now.strftime("%Y%m%d-%H%M%S")
     raw_dir = None
@@ -150,7 +171,12 @@ def cmd_check(args, settings) -> int:
         raw_dir = RUNS / f"raw-{stamp}"
         raw_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = run_checks(prompts, provider, now, raw_dir)
+    rows = []
+    for provider in providers:
+        if budget.remaining <= 0:
+            log.warning("SERP budget used up; skipping %s", provider.device)
+            continue
+        rows += run_checks(prompts, provider, now, raw_dir)
     writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))
@@ -161,7 +187,7 @@ def cmd_check(args, settings) -> int:
 
 
 def cmd_probe(args, settings) -> int:
-    provider = make_provider(args, CallBudget(3))
+    provider = make_provider(args, CallBudget(3), resolve_devices(args, settings)[0])
     result: SerpResult = provider.fetch_ai_overview(args.query)
     if args.save:
         Path(args.save).write_text(json.dumps(result.raw, indent=2))
@@ -203,6 +229,9 @@ def build_parser() -> argparse.ArgumentParser:
     for sp in (s, c, pr):
         sp.add_argument("--provider", choices=PROVIDERS, default=argparse.SUPPRESS,
                         help="SERP provider for this run; overrides SERP_PROVIDER")
+        sp.add_argument("--device", action="append", choices=DEVICES,
+                        help="device for this run, repeatable (check runs each); overrides `devices` in "
+                             "settings.yaml. select probes and probe use the first")
     return p
 
 

@@ -19,7 +19,8 @@ def test_run_checks_stops_at_budget(tmp_path):
     assert len(rows) == 2
     first = dict(zip(CHECK_HEADERS, rows[0]))
     assert first["varsity cited"] == "yes" and rows[1][CHECK_HEADERS.index("check status")] == "no_aio"
-    assert json.loads((tmp_path / "000.json").read_text())["query"] == "a"
+    assert json.loads((tmp_path / "mobile-000.json").read_text())["query"] == "a"
+    assert first["device"] == "mobile"
 
 
 def test_check_dry_run_end_to_end(tmp_path, monkeypatch):
@@ -204,3 +205,50 @@ def test_flag_beats_env_and_missing_credentials_are_a_clear_error(monkeypatch, c
     assert cli.main(["probe", "--provider", "dataforseo", "q"]) == 2
     assert "SERP provider 'dataforseo': DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD must be set" in caplog.text
     assert "Traceback" not in caplog.text
+
+
+def _check(tmp_path, monkeypatch, *extra):
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    (tmp_path / "active.json").write_text(json.dumps([{"prompt": "a", "cluster": "fde"},
+                                                      {"prompt": "b", "cluster": "genai"}]))
+    code = cli.main(["--provider", "fake", "check", "--dry-run", *extra])
+    out = next(tmp_path.glob("dry-run-*"))
+    return code, list(csv.DictReader(open(out / "checks.csv"))), list(csv.DictReader(open(out / "summary.csv")))
+
+
+def test_check_uses_devices_setting_by_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"]})
+    code, checks, summary = _check(tmp_path, monkeypatch)
+    assert code == 0 and {r["device"] for r in checks} == {"desktop"} and len(checks) == 2
+    assert [(r["cluster"], r["device"]) for r in summary] == [("fde", "desktop"), ("genai", "desktop"),
+                                                             ("ALL", "desktop")]
+
+
+def test_device_flag_overrides_and_runs_each_device(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"]})
+    code, checks, summary = _check(tmp_path, monkeypatch, "--device", "mobile", "--device", "desktop")
+    assert code == 0
+    assert [(r["prompt"], r["device"]) for r in checks] == [("a", "mobile"), ("b", "mobile"),
+                                                           ("a", "desktop"), ("b", "desktop")]
+    keys = [(r["cluster"], r["device"]) for r in summary]
+    assert keys == [("fde", "desktop"), ("fde", "mobile"), ("genai", "desktop"), ("genai", "mobile"),
+                    ("ALL", "desktop"), ("ALL", "mobile"), ("ALL", "ALL")]
+    assert summary[-1]["checks"] == "4"
+
+
+def test_unknown_device_in_settings_is_a_clear_error(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["tablet"]})
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    (tmp_path / "active.json").write_text("[]")
+    assert cli.main(["--provider", "fake", "check", "--dry-run"]) == 2
+    assert "unknown device(s) tablet" in caplog.text
+
+
+def test_probe_uses_first_device(monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setattr(cli, "load_settings", lambda: {"devices": ["desktop", "mobile"]})
+    with caplog.at_level(logging.INFO):
+        assert cli.main(["probe", "--provider", "fake", "q"]) == 0
+    assert "SERP provider: fake (desktop)" in caplog.text
