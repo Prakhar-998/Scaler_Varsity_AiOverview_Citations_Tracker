@@ -10,7 +10,8 @@ SERP fetch.
 All SERP access goes through `SerpProvider.fetch_ai_overview(query) -> SerpResult` in
 `tracker/checks/`. SERPHouse is the prototype provider because its free trial covers our
 call volume. To move to DataForSEO, add `tracker/checks/dataforseo.py` and one line in
-`get_provider`; matching, the prompt layer and output stay the same. The adapter also returns
+`get_provider`; matching, the prompt layer and output stay the same (this is how the
+DataForSEO adapter was added; see below). The adapter also returns
 `ok` / `no_aio` / `failed` itself, so "no AI Overview" can never be confused with "the call
 broke".
 
@@ -149,3 +150,28 @@ automations were getting 529s on 3.8 and 3.6 Flash. A demo can't depend on one p
 - **Never crash**: when every option has failed, drafting stops with a warning and `select`
   carries on with GSC candidates. A Gemini 404 is now a warning that moves the chain on, not a
   fatal error.
+
+## DataForSEO adapter, and no incomplete retry on probes
+**Found (2026-11-09):** SERPHouse returned incomplete AI Overviews (title only, no sources) for
+15 of 15 commercial queries probed in one `select` run. That is far past the ~15% switch rule
+above, so SERPHouse alone can't give a citation rate for BOFU searches.
+
+**Changes:**
+- **No incomplete retry during `select` probes.** A probe only asks "is an AI Overview shown?",
+  and an incomplete result already answers yes. With nearly every probe incomplete, the retry was
+  doubling probe cost for nothing. `fetch_ai_overview(query, retry_incomplete=False)` skips it;
+  `check` keeps the one retry, because there the sources are the point.
+- **DataForSEO adapter** (`tracker/checks/dataforseo.py`): `POST
+  /v3/serp/google/organic/live/advanced`, India (`location_code` 2356), English, mobile, with
+  `load_async_ai_overview: true` so DataForSEO waits for late-loading AI Overviews. References
+  are the `ai_overview` item's `references[]` (`url`, `domain`, `title`) in order, then any extra
+  ones nested in its elements. Organic results carry real URLs, so organic rank is a URL-level
+  match. An `ai_overview` item with no references is still `incomplete`, so the two providers'
+  numbers are comparable.
+- **SERPHouse stays an option**, and the provider is chosen per command (`SERP_PROVIDER` or
+  `--provider`). A sensible split is SERPHouse for cheap `select` probes, where incomplete is
+  fine, and DataForSEO for `check`.
+
+The DataForSEO fixtures are hand-written from the documented response shape, because no live
+call had been made yet. Replace them with `probe --provider dataforseo --save` captures on the
+first run and re-check the parser against them.

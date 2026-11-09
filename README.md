@@ -33,7 +33,7 @@ Run `check` twice a day at different times. Each check gets one status:
 | Status | Meaning | In citation rate? |
 |---|---|---|
 | `ok` | AI Overview shown, sources parsed | yes |
-| `incomplete` | AI Overview shown, but its sources loaded too late to capture (retried once) | no |
+| `incomplete` | AI Overview shown, but its sources loaded too late to capture (`check` retries once; `select` probes don't) | no |
 | `no_aio` | SERP loaded, no AI Overview | n/a |
 | `failed` | request or parse failed | no (left out of every rate) |
 
@@ -46,8 +46,9 @@ cp .env.example .env   # fill in keys; never commit .env
 
 | Variable | Purpose |
 |---|---|
-| `SERP_PROVIDER` | `serphouse` (default) or `fake` |
+| `SERP_PROVIDER` | `serphouse` (default), `dataforseo` or `fake`; `--provider` overrides it per command |
 | `SERPHOUSE_API_KEY` | SERPHouse API key |
+| `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | DataForSEO API login and password (from the DataForSEO dashboard) |
 | `OPENROUTER_KEY` | OpenRouter key, the default LLM for drafting (`OPENROUTER_API_KEY` also works) |
 | `OPENROUTER_MODELS` | optional; comma-separated `:free` models tried in order (overrides `config/settings.yaml`) |
 | `GEMINI_API_KEY` | only if you turn Gemini on in `llm.chain` (off by default) |
@@ -60,6 +61,17 @@ Inputs:
 - `gsc.csv` has `query, impressions`; a raw GSC "Queries" export also works
 
 Samples are in `data/sample/`. Keep real exports in `data/private/`, which is gitignored.
+
+### SERP providers
+Both adapters fetch google.com, India, English, mobile, and return the same statuses.
+- **serphouse** (default): `POST /serp/live`. For most commercial queries it returns the AI Overview
+  without its sources (`incomplete`): 15 of 15 in one `select` run.
+- **dataforseo**: `POST /v3/serp/google/organic/live/advanced` with `location_code` 2356 and
+  `load_async_ai_overview: true`, which waits for AI Overviews that load late. Use this for `check`
+  when the incomplete rate is high.
+
+Pick one with `SERP_PROVIDER` in `.env`, or `--provider` before or after the command name.
+The provider in use is logged at the start of every run.
 
 ### Candidate sources
 - **gsc**: queries from `--gsc` that match an active cluster's `match_terms` and contain a BOFU
@@ -99,6 +111,9 @@ Samples are in `data/sample/`. Keep real exports in `data/private/`, which is gi
 
 # spot-check one query against what you see on Google
 .venv/bin/python -m tracker probe "best generative ai course in india" --save /tmp/raw.json
+
+# same, through DataForSEO (works for select and check too)
+.venv/bin/python -m tracker probe --provider dataforseo "forward deployed engineer salary in india"
 ```
 
 Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to `runs/dry-run-*/`.
@@ -128,12 +143,14 @@ date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,bran
 ```
 
 All tests run offline, using fake providers and fake HTTP sessions. The SERPHouse tests use real
-captured responses in `tests/fixtures/serphouse/` (see the README in that folder).
+captured responses in `tests/fixtures/serphouse/`. The DataForSEO fixtures in
+`tests/fixtures/dataforseo/` are hand-written from the API docs until real captures replace them
+(see the README in that folder).
 
 ## Layout
 
 ```
-tracker/checks/   SERP adapter interface, SERPHouse adapter, fake provider, call budget
+tracker/checks/   SERP adapter interface, SERPHouse and DataForSEO adapters, fake provider, call budget
 tracker/match/    URL normalisation, Varsity / brand / competitor matching
 tracker/prompts/  Gemini drafting, filtering, scoring, dedupe
 tracker/output/   row building, summary, Sheets and CSV writers

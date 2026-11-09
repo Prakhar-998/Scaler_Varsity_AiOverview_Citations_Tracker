@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- DataForSEO SERP adapter (`SERP_PROVIDER=dataforseo`): `POST /v3/serp/google/organic/live/advanced`
+  for India (`location_code` 2356), English, mobile, with `load_async_ai_overview` so AI Overviews
+  that load late come back with their sources. Credentials come from `DATAFORSEO_LOGIN` /
+  `DATAFORSEO_PASSWORD`. SERPHouse is still the default.
+- `--provider serphouse|dataforseo|fake` is accepted after the command name for `probe`, `select`
+  and `check` (as well as before it), and the provider in use is logged. Missing credentials exit
+  with a clear message.
 - `--source gsc|llm|both` for `select` (default `both`). The GSC source uses real queries in an
   active cluster with a BOFU term. It drops navigational and pure own-brand queries, keeps our
   brand compared with a competitor (tagged `brand_comparison`), and tags competitor-brand
@@ -36,6 +43,8 @@
 - Offline test suite.
 
 ### Changed
+- `select` probes no longer retry incomplete AI Overviews. An incomplete result already proves an
+  AI Overview is shown, so the retry only spent a SERP call. `check` still retries once.
 - Gemini is no longer the default drafter, and a Gemini 404 no longer stops `select`; the chain
   moves to the next model.
 - Intent patterns now cover the GSC BOFU terms (salary, training, reviews, which, near me, and so on).
