@@ -3,6 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- `--source gsc|llm|both` for `select` (default `both`). The GSC source uses real queries in an
+  active cluster with a BOFU term, drops our own brand queries, and tags competitor-brand ones.
+  It needs no LLM. The Prompts tab gets `source` and `competitor` columns.
+- Provider-agnostic LLM layer with a fallback chain in `settings.yaml`. The default is OpenRouter
+  free models (`OPENROUTER_KEY` / `OPENROUTER_API_KEY`, `OPENROUTER_MODELS`); Gemini is optional
+  and off. Each call has a 60s timeout and up to 2 retries on 429/5xx/529, and if every model
+  fails `select` carries on with GSC candidates only.
+- A per-blog progress log, e.g. `drafting 12/51 via openrouter:<model>: <title> -> 4 candidates`.
+- `--limit N` drafts for only the first N blogs in active clusters.
+- Brand rules in `config/programs.yaml`: `brand_terms` and `competitors`.
 - Google redirect links (`/url?q=`, `/goto?url=`) are decoded during URL normalisation when the
   destination is readable.
 - `rank match` column in Checks, right after `organic rank`: `url` for an exact Varsity URL match, `domain` when only the
@@ -25,6 +35,10 @@
 - Offline test suite.
 
 ### Changed
+- Gemini is no longer the default drafter, and a Gemini 404 no longer stops `select`; the chain
+  moves to the next model.
+- Intent patterns now cover the GSC BOFU terms (salary, training, reviews, which, near me, and so on).
+- `--blogs` is optional with `--source gsc`.
 - Default Gemini model is now `gemini-3.8-flash`; `gemini-2.5-flash` is no longer available to new
   users. Set it with `gemini_model` in `config/settings.yaml` or the `GEMINI_MODEL` env var
   (the env var wins).
@@ -34,6 +48,8 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- Whitespace and newlines inside GSC queries are collapsed.
+- Tests no longer read the real `.env`, so they can't reach the network with live keys.
 - If the Gemini model returns 404, `select` now exits with a clear message naming the model and
   how to change it, instead of a traceback.
 - Organic rank is now recorded on `no_aio` and `incomplete` checks, not only `ok` ones.

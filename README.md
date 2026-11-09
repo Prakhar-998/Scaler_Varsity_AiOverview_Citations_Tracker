@@ -14,9 +14,12 @@ without junk.
 blogs.csv + gsc.csv + config/programs.yaml
         │
         ▼
- select ── Gemini drafts ~4 BOFU searches per blog
+ select ── candidates from two sources (--source gsc | llm | both, default both):
+             gsc: real GSC queries in an active cluster with a BOFU term (no LLM, always works)
+             llm: ~4 BOFU searches drafted per blog, to find searches we don't appear for yet
         ── code filter: keep only if it matches a real GSC query OR one probe shows an AI Overview
-        ── score (intent, GSC demand, AIO presence, program weight), dedupe, keep top 50
+        ── merge, dedupe across sources, score (intent, GSC demand, AIO presence, program weight),
+           keep top 50
         ── writes the Prompts tab + runs/active_prompts.json
         │
         ▼
@@ -45,7 +48,9 @@ cp .env.example .env   # fill in keys; never commit .env
 |---|---|
 | `SERP_PROVIDER` | `serphouse` (default) or `fake` |
 | `SERPHOUSE_API_KEY` | SERPHouse API key |
-| `GEMINI_API_KEY` | drafts candidate searches |
+| `OPENROUTER_KEY` | OpenRouter key, the default LLM for drafting (`OPENROUTER_API_KEY` also works) |
+| `OPENROUTER_MODELS` | optional; comma-separated `:free` models tried in order (overrides `config/settings.yaml`) |
+| `GEMINI_API_KEY` | only if you turn Gemini on in `llm.chain` (off by default) |
 | `GEMINI_MODEL` | optional; overrides `gemini_model` in `config/settings.yaml` (default `gemini-3.8-flash`) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | path to the service account file, or the JSON itself |
 | `SHEET_ID` | the **test** sheet (share it with the service account email) |
@@ -54,13 +59,37 @@ Inputs:
 - `blogs.csv` has the columns `title, primary_keyword, url`
 - `gsc.csv` has `query, impressions`; a raw GSC "Queries" export also works
 
-Samples are in `data/sample/`.
+Samples are in `data/sample/`. Keep real exports in `data/private/`, which is gitignored.
+
+### Candidate sources
+- **gsc**: queries from `--gsc` that match an active cluster's `match_terms` and contain a BOFU
+  term (best, top, course(s), fee(s), cost, price, vs, versus, worth, certification, certificate,
+  salary, training, program(me), institute, online, review(s), compare, which, near me).
+  - Queries naming our own brands (`brand_terms` in `config/programs.yaml`: Scaler,
+    InterviewBit, Varsity) are dropped.
+  - Competitor-brand queries (`competitors`) are kept and tagged `competitor = yes`.
+  - Ranked by impressions; near-duplicates are dropped.
+- **llm**: an LLM drafts BOFU searches per blog, mainly to find searches we don't appear for in GSC.
+  Models are tried in order from `llm.chain` in `config/settings.yaml`:
+  - The default chain is OpenRouter free models only. Gemini is available but off.
+  - Each call has a 60s timeout and up to 2 retries on 429/5xx/529, then moves to the next model.
+    A model that fails is skipped for the rest of the run.
+  - If every model fails, `select` logs a warning and carries on with GSC candidates only.
+- **both** (default): GSC candidates go first, so a search found by both sources keeps its GSC
+  version and is noted "also from llm".
 
 ## Run
 
 ```bash
 # 1. pick prompts (spends SERP calls only on probes for candidates with no GSC match)
-.venv/bin/python -m tracker select --blogs data/blogs.csv --gsc data/gsc.csv --dry-run
+.venv/bin/python -m tracker select --blogs data/private/blogs.csv --gsc data/private/gsc.csv --dry-run
+
+#    GSC only: no LLM, no key needed. Add --no-probe to make no SERP calls either.
+.venv/bin/python -m tracker select --source gsc --gsc data/private/gsc.csv --dry-run
+
+#    quick LLM test on the first 3 blogs in active clusters
+.venv/bin/python -m tracker select --source llm --limit 3 --no-probe \
+    --blogs data/private/blogs.csv --gsc data/private/gsc.csv --dry-run
 
 # 2. check them (twice a day); --save-raw keeps the JSON for fixtures
 .venv/bin/python -m tracker check --dry-run --save-raw
@@ -76,7 +105,7 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 
 | Tab | Columns |
 |---|---|
-| Prompts | prompt, cluster, intent, score, status (active/dropped), reason, source inputs |
+| Prompts | prompt, cluster, source (gsc/llm), competitor, intent, score, status (active/dropped), reason, source inputs |
 | Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
 | Summary | per cluster and ALL: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
 

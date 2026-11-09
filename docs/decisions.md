@@ -3,7 +3,7 @@
 ## Real SERP data over Gemini emulation
 We need to know what Google actually shows to a searcher in India. An LLM asked to "act like
 an AI Overview" gives plausible answers that have no link to Google's real citations. So
-Gemini is used only to *draft* candidate searches. Every citation we report comes from a real
+An LLM is used only to *draft* candidate searches. Every citation we report comes from a real
 SERP fetch.
 
 ## One provider adapter
@@ -20,7 +20,7 @@ references is the citation position. Those captures are the fixtures in `tests/f
 Request details (POST body, `tbs`) stay inside the SERPHouse adapter.
 
 ## Prompt layer filtered by code, not by the model
-Gemini over-generates. Code decides what survives, and only on evidence: a close match to a
+The LLM over-generates. Code decides what survives, and only on evidence: a close match to a
 real GSC query with impressions (rapidfuzz `token_sort_ratio`, which penalises extra words so
 "x" does not match "x fees"), or one probe SERP showing an AI Overview. Near-duplicates are
 removed *before* probing so we never pay for them. Each candidate is logged with keep/drop and a
@@ -97,3 +97,48 @@ readable URL. It can't be decoded.
 
 Organic rank is now recorded on every non-failed check, including `no_aio` and `incomplete`,
 because it does not depend on the AI Overview.
+
+## GSC-grounded candidates, with the LLM for gap discovery
+Real GSC queries are now a candidate source of their own (`--source gsc`). It needs no LLM
+and always works. A query becomes a candidate when it matches an active cluster's
+`match_terms` and contains a BOFU term (best, fees, vs, worth, salary, training, near me, and
+so on). Then:
+- Our own brands (Scaler, InterviewBit, Varsity) are dropped. A branded search tells us about
+  brand demand, not about whether we reach people who don't know us yet.
+- Competitor-brand queries ("fde academy course fees") are kept and tagged, because buyers
+  comparing alternatives are exactly the audience we want.
+- Queries are ranked by impressions, and near-duplicates are dropped in favour of the
+  higher-impression one.
+
+The LLM still drafts searches per blog (`--source llm`), but its job changes. GSC only shows
+searches where we already get impressions. The LLM's value is finding BOFU searches we *don't*
+appear for: the gaps. With `--source both` (the default), GSC candidates go first, so when the
+two overlap the GSC version, with its real demand, is kept and noted "also from llm". LLM
+candidates with no GSC match still have to show an AI Overview on a probe to survive.
+
+On the real FDE + GenAI export (2026-11-09), the GSC source alone gave 172 candidates (7 branded
+and 52 near-duplicates dropped) and filled the top 50 (18 FDE, 32 GenAI, 7 competitor) with no
+LLM or SERP calls. Two-word GSC queries are allowed ("fde salary"). LLM drafts still need at
+least 3 words.
+
+## LLM provider fallback after the Gemini outages
+In November 2026, a direct call to `gemini-3.8-flash` hung for 60s with no response, and other
+automations were getting 529s on 3.8 and 3.6 Flash. A demo can't depend on one provider. So:
+- **Provider-agnostic layer** (`tracker/llm/`): one `complete(prompt)` interface, with an
+  OpenRouter client (OpenAI-compatible) and a Gemini client.
+- **Fallback chain** set in `settings.yaml` (`llm.chain`). The default is OpenRouter free models
+  only; Gemini is off by default.
+  - The models are hosted by different providers, so one outage can't take out all of them:
+    `nvidia/nemotron-3.5-super-vl:free` (Nvidia), `xingchen-agi/xing4.0-29b-a4b:free` (Phala),
+    `google/gemma-4-31b-it:free` (Google AI Studio, placed last).
+  - We skipped the reasoning and code-tuned free models (slow or off-task) and the tiny 1.7–2.6B
+    ones (more risk of junk). Override the list with `OPENROUTER_MODELS`.
+- **Bounded waits**:
+  - Every call has a 60s timeout. A 429/5xx/529 gets at most 2 retries with exponential backoff
+    (2s, then 4s), then the chain moves on.
+  - A timeout or any other error moves on straight away.
+  - A model that fails is skipped for the rest of the run, so a dead model costs at most one
+    timeout, not one per blog.
+- **Never crash**: when every option has failed, drafting stops with a warning and `select`
+  carries on with GSC candidates. A Gemini 404 is now a warning that moves the chain on, not a
+  fatal error.
