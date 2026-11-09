@@ -79,3 +79,13 @@ def test_csv_writer_appends(tmp_path):
     lines = list(csv.reader(open(tmp_path / "checks.csv")))
     assert lines[0] == CHECK_HEADERS and len(lines) == 3
     assert len(w.read_checks()) == 2
+
+
+def test_prompt_row_has_source_and_competitor():
+    from tracker.output import PROMPT_HEADERS, prompt_row
+    from tracker.prompts import Candidate, Decision
+
+    d = Decision(candidate=Candidate("fde academy course fees", "fde", "", source="gsc", competitor=True),
+                 status="active", reason="kept: GSC match", sources=["gsc: fde academy course fees (800 impr)"])
+    row = dict(zip(PROMPT_HEADERS, prompt_row(d)))
+    assert row["source"] == "gsc" and row["competitor"] == "yes"

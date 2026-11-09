@@ -41,6 +41,14 @@ class Decision:
         return self.candidate.prompt
 
 
+def _note_overlap(kept: Decision, dropped: Decision) -> None:
+    """When sources overlap (an LLM draft duplicates a GSC query), say so on the survivor."""
+    src = dropped.candidate.source
+    note = f"also from {src}"
+    if src != kept.candidate.source and note not in kept.sources:
+        kept.sources.append(note)
+
+
 def _best_gsc_match(prompt: str, gsc: List[GscQuery], threshold: float):
     if not gsc:
         return None, 0.0
@@ -90,7 +98,7 @@ def select_prompts(
     pending: List[Decision] = []
 
     # 1. sanity + exact duplicates
-    seen = set()
+    seen: Dict[str, Decision] = {}
     for d in decisions:
         n = len(d.prompt.split())
         min_words = MIN_WORDS_GSC if d.candidate.source == "gsc" else MIN_WORDS
@@ -100,8 +108,9 @@ def select_prompts(
             d.reason = f"length {n} words outside {min_words}-{MAX_WORDS}"
         elif d.prompt in seen:
             d.reason = "exact duplicate"
+            _note_overlap(seen[d.prompt], d)
         else:
-            seen.add(d.prompt)
+            seen[d.prompt] = d
             pending.append(d)
 
     # 2. GSC match (same cluster first, then any)
@@ -122,6 +131,7 @@ def select_prompts(
         dup = next((u for u in unique if fuzz.token_sort_ratio(d.prompt, u.prompt) >= dedupe_threshold), None)
         if dup is not None:
             d.reason = f"near-duplicate of '{dup.prompt}'"
+            _note_overlap(dup, d)
         else:
             unique.append(d)
 

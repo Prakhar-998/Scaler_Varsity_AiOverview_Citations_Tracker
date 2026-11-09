@@ -17,11 +17,11 @@ from typing import List, Optional
 
 from tracker.checks import BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, SerpResult
-from tracker.config import ROOT, load_blogs, load_clusters, load_gsc, load_settings
+from tracker.config import ROOT, load_blogs, load_brand_rules, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
 from tracker.llm import build_chain
-from tracker.prompts import ACTIVE, LLMDrafter, draft_candidates, select_prompts
+from tracker.prompts import ACTIVE, LLMDrafter, draft_candidates, gsc_candidates, select_prompts, tag_brands
 
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
@@ -58,16 +58,30 @@ def make_drafter(settings) -> Optional[LLMDrafter]:
 
 
 def cmd_select(args, settings) -> int:
+    if args.source != "gsc" and not args.blogs:
+        log.error("--blogs is required with --source %s", args.source)
+        return 2
     clusters = load_clusters()
-    blogs = load_blogs(Path(args.blogs), clusters)
+    rules = load_brand_rules()
     gsc = load_gsc(Path(args.gsc), clusters)
-    log.info("%d blogs in active clusters, %d GSC queries", sum(b.cluster is not None for b in blogs), len(gsc))
+    log.info("source: %s; %d GSC queries", args.source, len(gsc))
 
+    # GSC first, so when both sources produce the same search the GSC version is the one kept
     candidates = []
-    drafter = make_drafter(settings)
-    if drafter is not None:
-        candidates = draft_candidates(blogs, clusters, drafter, int(settings.get("candidates_per_blog", 4)))
-    log.info("%d LLM candidates drafted", len(candidates))
+    if args.source in ("gsc", "both"):
+        candidates += gsc_candidates(gsc, clusters, rules, float(settings.get("dedupe_threshold", 90)))
+    if args.source in ("llm", "both"):
+        blogs = load_blogs(Path(args.blogs), clusters)
+        log.info("%d blogs in active clusters", sum(b.cluster is not None for b in blogs))
+        drafted = []
+        drafter = make_drafter(settings)
+        if drafter is not None:
+            drafted = draft_candidates(blogs, clusters, drafter, int(settings.get("candidates_per_blog", 4)))
+        tag_brands(drafted, rules)
+        log.info("%d LLM candidates drafted", len(drafted))
+        if not drafted and args.source == "both":
+            log.warning("no LLM candidates; continuing with GSC candidates only")
+        candidates += drafted
 
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     provider = None if args.no_probe else get_provider(args.provider, budget)
@@ -77,7 +91,8 @@ def cmd_select(args, settings) -> int:
 
     RUNS.mkdir(exist_ok=True)
     ACTIVE_PROMPTS.write_text(json.dumps(
-        [{"prompt": d.prompt, "cluster": d.candidate.cluster} for d in kept], indent=2))
+        [{"prompt": d.prompt, "cluster": d.candidate.cluster, "source": d.candidate.source} for d in kept],
+        indent=2))
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     make_writer(args.dry_run, stamp).write_prompts([prompt_row(d) for d in decisions])
     return 0
@@ -146,8 +161,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("select", help="draft, filter and score prompts")
-    s.add_argument("--blogs", required=True, help="CSV: title, primary_keyword, url")
+    s.add_argument("--blogs", help="CSV: title, primary_keyword, url (needed unless --source gsc)")
     s.add_argument("--gsc", required=True, help="CSV: query, impressions (or raw GSC export)")
+    s.add_argument("--source", choices=("gsc", "llm", "both"), default="both",
+                   help="candidate sources: real GSC queries, LLM drafts per blog, or both (default)")
     s.add_argument("--no-probe", action="store_true", help="skip probe SERP calls")
 
     c = sub.add_parser("check", help="check active prompts once")
