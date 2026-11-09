@@ -149,7 +149,8 @@ def select_prompts(
             d.reason = "no GSC match; not probed (SERP budget used up)"
             continue
         try:
-            res = provider.fetch_ai_overview(d.prompt)
+            # an incomplete AI Overview already proves one is shown, so don't pay for a retry
+            res = provider.fetch_ai_overview(d.prompt, retry_incomplete=False)
         except BudgetExceeded:
             budget_hit = True
             d.reason = "no GSC match; not probed (SERP budget used up)"

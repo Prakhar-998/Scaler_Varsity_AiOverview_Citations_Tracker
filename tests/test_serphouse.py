@@ -101,6 +101,14 @@ def test_incomplete_retry_skipped_when_budget_used_up(load_fixture):
     assert result.status == STATUS_INCOMPLETE and len(session.calls) == 1
 
 
+def test_incomplete_not_retried_when_retry_disabled(load_fixture):
+    budget = CallBudget(10)
+    provider, session = make([FakeResponse(body=load_fixture(INCOMPLETE))], budget=budget)
+    result = provider.fetch_ai_overview("q", retry_incomplete=False)
+    assert result.status == STATUS_INCOMPLETE and result.shown
+    assert len(session.calls) == 1 and budget.used == 1
+
+
 def test_full_and_no_aio_are_not_retried(load_fixture):
     for name in (AIO, NO_AIO):
         provider, session = make([FakeResponse(body=load_fixture(name))])

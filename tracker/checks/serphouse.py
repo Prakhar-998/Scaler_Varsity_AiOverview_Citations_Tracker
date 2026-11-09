@@ -69,10 +69,11 @@ class SerphouseProvider(SerpProvider):
         self.incomplete_retries = incomplete_retries
         self.incomplete_delay = incomplete_delay
 
-    def fetch_ai_overview(self, query: str) -> SerpResult:
-        """Fetch once; if the AI Overview came back without sources (late load), retry once."""
+    def fetch_ai_overview(self, query: str, retry_incomplete: bool = True) -> SerpResult:
+        """Fetch once; if the AI Overview came back without sources (late load), retry once
+        unless `retry_incomplete` is False."""
         result = self._fetch(query)
-        for _ in range(self.incomplete_retries):
+        for _ in range(self.incomplete_retries if retry_incomplete else 0):
             if result.status != STATUS_INCOMPLETE:
                 break
             log.info("AI Overview without sources for %r; retrying", query)

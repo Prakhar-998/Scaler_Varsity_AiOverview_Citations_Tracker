@@ -88,6 +88,7 @@ def test_incomplete_probe_counts_as_aio_shown():
     d = select_prompts([cand(q)], [], CLUSTERS, provider, SETTINGS)[0]
     assert d.status == ACTIVE and d.probe_aio
     assert any("sources not loaded" in s for s in d.sources)
+    assert provider.retry_flags == [False]  # probes never pay for the late-load retry
 
 
 def test_near_duplicates_dropped_before_probing():

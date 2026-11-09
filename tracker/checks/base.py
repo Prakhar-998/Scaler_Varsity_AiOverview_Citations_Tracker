@@ -73,5 +73,7 @@ class SerpProvider:
 
     name = "base"
 
-    def fetch_ai_overview(self, query: str) -> SerpResult:
+    def fetch_ai_overview(self, query: str, retry_incomplete: bool = True) -> SerpResult:
+        """`retry_incomplete=False` skips the late-load retry, e.g. for select probes, where an
+        incomplete AI Overview already proves one is shown."""
         raise NotImplementedError
