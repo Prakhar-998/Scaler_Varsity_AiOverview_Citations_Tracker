@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- Default Gemini model is now `gemini-3.8-flash`; `gemini-2.5-flash` is no longer available to new
+  users. Set it with `gemini_model` in `config/settings.yaml` or the `GEMINI_MODEL` env var
+  (the env var wins).
+
 ### Fixed
+- If the Gemini model returns 404, `select` now exits with a clear message naming the model and
+  how to change it, instead of a traceback.
 - Organic rank is now recorded on `no_aio` and `incomplete` checks, not only `ok` ones.
 - SERPHouse requests now always send `tbs: ""`. SERPHouse added Google Verbatim (`tbs=li:1`) by
   default, which suppressed AI Overviews.
