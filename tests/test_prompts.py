@@ -27,7 +27,7 @@ class FakeDrafter:
         self.replies = replies
 
     def draft(self, blog, cluster, n):
-        return self.replies[blog.title][:n]
+        return self.replies[blog.title][:n], "fake:model"
 
 
 @pytest.mark.parametrize("prompt,intent", [
@@ -133,38 +133,27 @@ def test_gemini_model_default_settings_and_env_override(monkeypatch):
     assert resolve_gemini_model({"gemini_model": "from-settings"}) == "from-settings"
 
 
-def _drafter_with_client(generate):
-    from tracker.prompts import GeminiDrafter
-
-    class Models:
-        generate_content = staticmethod(generate)
-
-    d = GeminiDrafter.__new__(GeminiDrafter)  # skip __init__: no API key or network
-    d.model = "gemini-2.5-flash"
-    d.client = type("Client", (), {"models": Models})()
-    return d
+def test_parse_searches_tolerates_prose_around_json():
+    assert parse_searches('Sure! Here you go:\n{"searches": ["a b c"]}\nHope that helps.') == ["a b c"]
 
 
-def test_gemini_404_becomes_clear_error():
-    from google.genai.errors import ClientError
-    from tracker.prompts import GeminiModelNotFound
+def test_draft_progress_log_and_all_llm_fail(caplog):
+    import logging
+    from tracker.llm import AllLLMsFailed
 
-    def generate(**kwargs):
-        raise ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND", "message":
-            "models/gemini-2.5-flash is no longer available to new users."}})
+    class Flaky:
+        def __init__(self):
+            self.calls = 0
 
-    with pytest.raises(GeminiModelNotFound) as exc:
-        _drafter_with_client(generate).draft(Blog("t", "k", cluster="genai"), CLUSTERS[1], 4)
-    msg = str(exc.value)
-    assert "gemini-2.5-flash" in msg and "404" in msg and "GEMINI_MODEL" in msg
-    assert "no longer available to new users" in msg
+        def draft(self, blog, cluster, n):
+            self.calls += 1
+            if self.calls == 1:
+                return ["best genai course in india"], "openrouter:m:free"
+            raise AllLLMsFailed("all LLM options failed: openrouter:m:free")
 
-
-def test_gemini_other_client_errors_not_masked():
-    from google.genai.errors import ClientError
-
-    def generate(**kwargs):
-        raise ClientError(400, {"error": {"code": 400, "status": "INVALID_ARGUMENT", "message": "bad"}})
-
-    with pytest.raises(ClientError):
-        _drafter_with_client(generate).draft(Blog("t", "k", cluster="genai"), CLUSTERS[1], 4)
+    blogs = [Blog(f"GenAI {i}", "genai", cluster="genai") for i in range(3)]
+    with caplog.at_level(logging.INFO):
+        out = draft_candidates(blogs, CLUSTERS, Flaky(), per_blog=4)
+    assert [c.prompt for c in out] == ["best genai course in india"] and out[0].source == "llm"
+    assert "drafting 1/3 via openrouter:m:free: GenAI 0 -> 1 candidates" in caplog.text
+    assert "LLM drafting stopped at blog 2/3" in caplog.text

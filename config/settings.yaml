@@ -6,4 +6,21 @@ keep_top: 50
 gsc_match_threshold: 85   # rapidfuzz token_sort_ratio to count as a GSC match
 dedupe_threshold: 90      # candidates at or above this similarity are near-duplicates
 probe_unmatched: true     # spend one SERP call on candidates with no GSC match
+
+# LLM drafting: options are tried in order. Per call: timeout, then up to max_retries retries on
+# 429/5xx/529 with exponential backoff, then the next model. A model that fails is skipped for the
+# rest of the run. If every option fails, select carries on with GSC candidates only.
+llm:
+  timeout_seconds: 60
+  max_retries: 2
+  backoff_seconds: 2
+  chain:
+    - provider: openrouter
+      # OPENROUTER_MODELS env var (comma-separated) overrides this list
+      models:
+        - nvidia/nemotron-3.5-super-vl:free
+        - xingchen-agi/xing4.0-29b-a4b:free
+        - google/gemma-4-31b-it:free
+    - provider: gemini
+      enabled: false   # off by default after the Nov 2026 outages; set true to add it as a fallback
 gemini_model: gemini-3.8-flash  # GEMINI_MODEL env var overrides this

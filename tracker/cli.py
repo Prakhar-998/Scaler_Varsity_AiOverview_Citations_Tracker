@@ -20,8 +20,8 @@ from tracker.checks.base import STATUS_FAILED, SerpResult
 from tracker.config import ROOT, load_blogs, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
-from tracker.prompts import (ACTIVE, GeminiDrafter, GeminiModelNotFound, draft_candidates, resolve_gemini_model,
-                             select_prompts)
+from tracker.llm import build_chain
+from tracker.prompts import ACTIVE, LLMDrafter, draft_candidates, select_prompts
 
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
@@ -47,21 +47,27 @@ def make_writer(dry_run: bool, stamp: str):
     return SheetsWriter(os.environ.get("SHEET_ID", ""), os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""))
 
 
+def make_drafter(settings) -> Optional[LLMDrafter]:
+    chain = build_chain(settings)
+    if not chain.options:
+        log.warning("no LLM provider configured (check OPENROUTER_KEY / settings.yaml llm.chain); "
+                    "skipping LLM drafting")
+        return None
+    log.info("LLM chain: %s", " -> ".join(o.label for o in chain.options))
+    return LLMDrafter(chain)
+
+
 def cmd_select(args, settings) -> int:
     clusters = load_clusters()
     blogs = load_blogs(Path(args.blogs), clusters)
     gsc = load_gsc(Path(args.gsc), clusters)
     log.info("%d blogs in active clusters, %d GSC queries", sum(b.cluster is not None for b in blogs), len(gsc))
 
-    model = resolve_gemini_model(settings)
-    log.info("drafting with Gemini model %s", model)
-    drafter = GeminiDrafter(os.environ.get("GEMINI_API_KEY", ""), model)
-    try:
+    candidates = []
+    drafter = make_drafter(settings)
+    if drafter is not None:
         candidates = draft_candidates(blogs, clusters, drafter, int(settings.get("candidates_per_blog", 4)))
-    except GeminiModelNotFound as exc:
-        log.error("%s", exc)
-        return 2
-    log.info("%d candidates drafted", len(candidates))
+    log.info("%d LLM candidates drafted", len(candidates))
 
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     provider = None if args.no_probe else get_provider(args.provider, budget)

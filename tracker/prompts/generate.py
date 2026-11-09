@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import json
-import os
+import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Tuple
 
 from tracker.config import Blog, Cluster
+from tracker.llm import AllLLMsFailed, LLMChain
+from tracker.llm.gemini import DEFAULT_GEMINI_MODEL, GeminiModelNotFound, resolve_gemini_model  # noqa: F401
+
+log = logging.getLogger(__name__)
 
 INTENT_PATTERNS = [
     # (intent, regex, buying-intent weight 0..1)
@@ -39,6 +43,9 @@ class Candidate:
     source_blog: str
     intent: str = "other"
     intent_weight: float = OTHER_INTENT_WEIGHT
+    source: str = "llm"        # "llm" (drafted per blog) or "gsc" (real GSC query)
+    competitor: bool = False   # names a competitor brand, e.g. "fde academy course fees"
+    impressions: int = 0       # GSC impressions, for gsc-sourced candidates
 
 
 def classify_intent(prompt: str):
@@ -55,72 +62,53 @@ def clean_prompt(text: str) -> str:
 
 
 def parse_searches(text: str) -> List[str]:
-    """Pull the list out of a model reply, tolerating code fences."""
+    """Pull the list out of a model reply, tolerating code fences and prose around the JSON."""
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     try:
         data = json.loads(text)
     except ValueError:
+        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+        try:
+            data = json.loads(match.group(0)) if match else None
+        except ValueError:
+            data = None
+    if data is None:
         return []
     items = data.get("searches", []) if isinstance(data, dict) else data
     return [s for s in items if isinstance(s, str)] if isinstance(items, list) else []
 
 
-DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+class LLMDrafter:
+    """Drafts searches for one blog through an LLMChain. Returns (searches, label that answered)."""
 
+    def __init__(self, chain: LLMChain):
+        self.chain = chain
 
-class GeminiModelNotFound(RuntimeError):
-    """The configured Gemini model returned 404 (retired, misspelled, or not enabled for this key)."""
-
-    def __init__(self, model: str, detail: str = ""):
-        self.model = model
-        msg = f"Gemini model '{model}' returned 404 (not found or no longer available)."
-        detail = detail.strip()
-        if detail:
-            msg += f" Gemini said: {detail}" + ("" if detail.endswith((".", "!", "?")) else ".")
-        msg += " Set GEMINI_MODEL in .env, or gemini_model in config/settings.yaml, to an available model."
-        super().__init__(msg)
-
-
-def resolve_gemini_model(settings: Dict) -> str:
-    """GEMINI_MODEL env var, then gemini_model in settings.yaml, then the default."""
-    return os.environ.get("GEMINI_MODEL", "").strip() or settings.get("gemini_model") or DEFAULT_GEMINI_MODEL
-
-
-class GeminiDrafter:
-    def __init__(self, api_key: str, model: str = DEFAULT_GEMINI_MODEL):
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY is not set")
-        from google import genai  # imported lazily so offline tests don't need it
-
-        self.client = genai.Client(api_key=api_key)
-        self.model = model
-
-    def draft(self, blog: Blog, cluster: Cluster, n: int) -> List[str]:
+    def draft(self, blog: Blog, cluster: Cluster, n: int) -> Tuple[List[str], str]:
         prompt = PROMPT_TEMPLATE.format(cluster=cluster.name, title=blog.title, keyword=blog.primary_keyword, n=n)
-        from google.genai import errors
-
-        try:
-            resp = self.client.models.generate_content(
-                model=self.model, contents=prompt, config={"response_mime_type": "application/json"}
-            )
-        except errors.ClientError as exc:
-            if exc.code == 404:
-                raise GeminiModelNotFound(self.model, exc.message or "") from exc
-            raise
-        return parse_searches(resp.text or "")
+        text, label = self.chain.complete(prompt)
+        return parse_searches(text), label
 
 
 def draft_candidates(blogs: List[Blog], clusters: List[Cluster], drafter, per_blog: int) -> List[Candidate]:
+    """Draft for every blog in an active cluster. If every LLM option fails, log a warning and
+    return what was drafted so far; the caller carries on with GSC candidates."""
     by_key: Dict[str, Cluster] = {c.key: c for c in clusters}
+    todo = [(b, by_key[b.cluster]) for b in blogs if b.cluster in by_key]
     out: List[Candidate] = []
-    for blog in blogs:
-        cluster: Optional[Cluster] = by_key.get(blog.cluster or "")
-        if cluster is None:
-            continue  # blog not in an active cluster
-        for raw in drafter.draft(blog, cluster, per_blog):
+    for i, (blog, cluster) in enumerate(todo, start=1):
+        try:
+            searches, label = drafter.draft(blog, cluster, per_blog)
+        except AllLLMsFailed as exc:
+            log.warning("LLM drafting stopped at blog %d/%d (%s); continuing with %d LLM candidates "
+                        "plus GSC candidates", i, len(todo), exc, len(out))
+            break
+        before = len(out)
+        for raw in searches:
             prompt = clean_prompt(raw)
             if not prompt:
                 continue
             intent, weight = classify_intent(prompt)
-            out.append(Candidate(prompt, cluster.key, blog.title, intent, weight))
+            out.append(Candidate(prompt, cluster.key, blog.title, intent, weight, source="llm"))
+        log.info("drafting %d/%d via %s: %s -> %d candidates", i, len(todo), label, blog.title, len(out) - before)
     return out

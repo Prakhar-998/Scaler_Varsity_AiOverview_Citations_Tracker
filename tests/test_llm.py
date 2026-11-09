@@ -147,3 +147,59 @@ def test_build_chain_without_keys_is_empty(monkeypatch):
         monkeypatch.delenv(var, raising=False)
     c = build_chain({"llm": {"chain": [{"provider": "openrouter"}, {"provider": "gemini"}]}})
     assert c.options == []
+
+
+# --- Gemini client (SDK faked; no network) ---
+
+def _gemini(generate):
+    from tracker.llm.gemini import GeminiClient
+
+    class Models:
+        generate_content = staticmethod(generate)
+
+    c = GeminiClient.__new__(GeminiClient)  # skip __init__: no API key or network
+    c.model = "gemini-2.5-flash"
+    c.client = type("Client", (), {"models": Models})()
+    return c
+
+
+def test_gemini_404_is_clear_and_not_retried():
+    from google.genai.errors import ClientError
+    from tracker.llm.gemini import GeminiModelNotFound
+
+    def generate(**kwargs):
+        raise ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND", "message":
+            "models/gemini-2.5-flash is no longer available to new users."}})
+
+    with pytest.raises(GeminiModelNotFound) as exc:
+        _gemini(generate).complete("p")
+    msg = str(exc.value)
+    assert "gemini-2.5-flash" in msg and "404" in msg and "GEMINI_MODEL" in msg
+    assert not exc.value.retryable
+
+
+def test_gemini_529_is_retryable():
+    from google.genai.errors import APIError
+
+    def generate(**kwargs):
+        raise APIError(529, {"error": {"code": 529, "status": "OVERLOADED", "message": "overloaded"}})
+
+    with pytest.raises(LLMError) as exc:
+        _gemini(generate).complete("p")
+    assert exc.value.retryable
+
+
+def test_gemini_timeout_moves_on():
+    def generate(**kwargs):
+        raise TimeoutError("read timed out")
+
+    with pytest.raises(LLMError) as exc:
+        _gemini(generate).complete("p")
+    assert not exc.value.retryable
+
+
+def test_gemini_resolve_model(monkeypatch):
+    from tracker.llm.gemini import resolve_gemini_model
+
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    assert resolve_gemini_model({}) == "gemini-3.8-flash"

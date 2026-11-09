@@ -37,15 +37,12 @@ def test_check_without_select_fails(tmp_path, monkeypatch):
 
 def test_select_dry_run_with_fake_drafter(tmp_path, monkeypatch):
     class Drafter:
-        def __init__(self, *a, **k):
-            pass
-
         def draft(self, blog, cluster, n):
             if cluster.key == "fde":
-                return ["forward deployed engineer salary india"]
-            return ["best generative ai course in india", "generative ai course fees", "genai"]
+                return ["forward deployed engineer salary india"], "fake:model"
+            return ["best generative ai course in india", "generative ai course fees", "genai"], "fake:model"
 
-    monkeypatch.setattr(cli, "GeminiDrafter", Drafter)
+    monkeypatch.setattr(cli, "make_drafter", lambda settings: Drafter())
     monkeypatch.setattr(cli, "RUNS", tmp_path)
     monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
     root = cli.ROOT / "data/sample"
@@ -68,21 +65,32 @@ def test_organic_rank_recorded_without_full_aio():
         assert d["varsity cited"] == ""  # still unknown / not applicable
 
 
-def test_select_reports_missing_gemini_model_without_traceback(tmp_path, monkeypatch, caplog):
-    from tracker.prompts import GeminiModelNotFound
+def test_select_survives_every_llm_failing(tmp_path, monkeypatch, caplog):
+    from tracker.llm import LLMChain, LLMClient, LLMError
+    from tracker.prompts import LLMDrafter
 
-    class Drafter:
-        def __init__(self, *a, **k):
-            pass
+    class Down(LLMClient):
+        provider = "fake"
 
-        def draft(self, blog, cluster, n):
-            raise GeminiModelNotFound("gemini-2.5-flash", "no longer available")
+        def complete(self, prompt):
+            raise LLMError("timed out after 60s")
 
-    monkeypatch.setattr(cli, "GeminiDrafter", Drafter)
+    chain = LLMChain([Down("a"), Down("b")], backoff=0, sleep=lambda s: None)
+    monkeypatch.setattr(cli, "make_drafter", lambda settings: LLMDrafter(chain))
     monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
     root = cli.ROOT / "data/sample"
     code = cli.main(["--provider", "fake", "select", "--blogs", str(root / "blogs.csv"),
                      "--gsc", str(root / "gsc.csv"), "--dry-run"])
-    assert code == 2
-    assert "gemini-2.5-flash" in caplog.text and "GEMINI_MODEL" in caplog.text
-    assert "Traceback" not in caplog.text
+    assert code == 0
+    assert "LLM drafting stopped" in caplog.text and "Traceback" not in caplog.text
+
+
+def test_select_without_any_llm_configured(tmp_path, monkeypatch, caplog):
+    # conftest.offline_env clears every key, so build_chain finds nothing configured
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    root = cli.ROOT / "data/sample"
+    code = cli.main(["--provider", "fake", "select", "--blogs", str(root / "blogs.csv"),
+                     "--gsc", str(root / "gsc.csv"), "--dry-run"])
+    assert code == 0 and "no LLM provider configured" in caplog.text
