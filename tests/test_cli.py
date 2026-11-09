@@ -146,3 +146,34 @@ def test_both_falls_back_to_gsc_only_when_every_llm_fails(tmp_path, monkeypatch,
 def test_source_llm_requires_blogs(tmp_path, monkeypatch, caplog):
     code, _ = _select(tmp_path, monkeypatch, "--source", "llm", blogs=False)
     assert code == 2 and "--blogs is required" in caplog.text
+
+
+def test_limit_drafts_only_first_n_blogs(tmp_path, monkeypatch, caplog):
+    import logging
+
+    seen = []
+
+    class Drafter:
+        def draft(self, blog, cluster, n):
+            seen.append(blog.title)
+            return ["best generative ai course for working professionals"], "fake:model"
+
+    monkeypatch.setattr(cli, "make_drafter", lambda settings: Drafter())
+    with caplog.at_level(logging.INFO):
+        code, _ = _select(tmp_path, monkeypatch, "--source", "llm", "--limit", "1", "--no-probe")
+    assert code == 0
+    assert seen == ["What Is a Forward Deployed Engineer? Role and Salary in India"]  # first of 2 sample blogs
+    assert "drafting 1/1 via fake:model" in caplog.text
+
+
+def test_no_limit_drafts_all_blogs(tmp_path, monkeypatch):
+    seen = []
+
+    class Drafter:
+        def draft(self, blog, cluster, n):
+            seen.append(blog.title)
+            return [], "fake:model"
+
+    monkeypatch.setattr(cli, "make_drafter", lambda settings: Drafter())
+    _select(tmp_path, monkeypatch, "--source", "llm", "--no-probe")
+    assert len(seen) == 2

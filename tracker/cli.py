@@ -71,8 +71,11 @@ def cmd_select(args, settings) -> int:
     if args.source in ("gsc", "both"):
         candidates += gsc_candidates(gsc, clusters, rules, float(settings.get("dedupe_threshold", 90)))
     if args.source in ("llm", "both"):
-        blogs = load_blogs(Path(args.blogs), clusters)
-        log.info("%d blogs in active clusters", sum(b.cluster is not None for b in blogs))
+        blogs = [b for b in load_blogs(Path(args.blogs), clusters) if b.cluster is not None]
+        log.info("%d blogs in active clusters", len(blogs))
+        if args.limit:
+            blogs = blogs[:args.limit]
+            log.info("--limit %d: drafting for the first %d blogs only", args.limit, len(blogs))
         drafted = []
         drafter = make_drafter(settings)
         if drafter is not None:
@@ -166,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--source", choices=("gsc", "llm", "both"), default="both",
                    help="candidate sources: real GSC queries, LLM drafts per blog, or both (default)")
     s.add_argument("--no-probe", action="store_true", help="skip probe SERP calls")
+    s.add_argument("--limit", type=int, help="draft for only the first N blogs in active clusters (quick tests)")
 
     c = sub.add_parser("check", help="check active prompts once")
     c.add_argument("--save-raw", action="store_true", help="save raw SERP JSON under runs/")
