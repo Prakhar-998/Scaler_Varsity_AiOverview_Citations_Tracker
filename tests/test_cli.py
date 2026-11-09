@@ -359,3 +359,17 @@ def test_check_prompt_file_leaves_active_prompts_untouched(tmp_path, monkeypatch
     checks = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "checks.csv")))
     assert [r["prompt"] for r in checks] == ["what is a forward deployed engineer", "best generative ai course in india"]
     assert (tmp_path / "active.json").read_text() == real
+
+
+def test_check_aborts_before_any_call_when_over_max_cost(tmp_path, monkeypatch, caplog):
+    calls = []
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"],
+                                                      "cost_per_check_usd": {"fake": 0.25}})
+    monkeypatch.setattr(cli, "run_checks", lambda *a, **k: calls.append(a) or [])
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    (tmp_path / "active.json").write_text(json.dumps([{"prompt": "a", "cluster": "fde"},
+                                                      {"prompt": "b", "cluster": "fde"}]))
+    assert cli.main(["--provider", "fake", "check", "--dry-run", "--max-cost", "0.40"]) == 3
+    assert calls == [] and "estimated cost $0.50 is over --max-cost $0.40" in caplog.text
+    assert cli.main(["--provider", "fake", "check", "--dry-run", "--max-cost", "0.50"]) == 0

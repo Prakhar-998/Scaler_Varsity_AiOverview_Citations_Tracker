@@ -168,12 +168,15 @@ def cmd_select(args, settings) -> int:
     return 0
 
 
-def log_cost_estimate(provider: str, checks: int, settings) -> None:
+def log_cost_estimate(provider: str, checks: int, settings) -> Optional[float]:
+    """Log and return the estimated cost in USD, or None if the provider has no rate configured."""
     rate = (settings.get("cost_per_check_usd") or {}).get(provider)
     if rate is None:
-        return
+        return None
+    cost = checks * float(rate)
     log.info("estimated cost: %d checks x $%.3f = $%.2f on %s (retries cost extra)",
-             checks, float(rate), checks * float(rate), provider)
+             checks, float(rate), cost, provider)
+    return cost
 
 
 def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None):
@@ -212,7 +215,10 @@ def cmd_check(args, settings) -> int:
         log.warning("%d checks (%d prompts x %d devices) but budget is %d calls; later checks will be skipped",
                     planned, len(prompts), len(devices), budget.max_calls)
     providers = [make_provider(args, settings, budget, d) for d in devices]
-    log_cost_estimate(providers[0].name, planned, settings)
+    cost = log_cost_estimate(providers[0].name, planned, settings)
+    if args.max_cost is not None and cost is not None and cost > args.max_cost:
+        log.error("estimated cost $%.2f is over --max-cost $%.2f; no checks run", cost, args.max_cost)
+        return 3
     now = datetime.now()
     stamp = now.strftime("%Y%m%d-%H%M%S")
     raw_dir = None
@@ -268,6 +274,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     c = sub.add_parser("check", help="check active prompts once")
     c.add_argument("--save-raw", action="store_true", help="save raw SERP JSON under runs/")
+    c.add_argument("--max-cost", type=float, help="abort before any SERP call if the estimated cost (USD) is "
+                                                   "over this")
     c.add_argument("--prompts", help="CSV (prompt, cluster) to check instead of runs/active_prompts.json, "
                                      "which is left untouched")
 
