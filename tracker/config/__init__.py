@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -53,6 +54,32 @@ def load_clusters(path: Optional[Path] = None, active_only: bool = True) -> List
     data = load_yaml(path or CONFIG_DIR / "programs.yaml")
     clusters = [Cluster(**c) for c in data.get("clusters", [])]
     return [c for c in clusters if c.active] if active_only else clusters
+
+
+@dataclass
+class BrandRules:
+    brand_terms: List[str] = field(default_factory=list)
+    competitors: List[str] = field(default_factory=list)
+
+    @staticmethod
+    def _find(text: str, terms: List[str]) -> str:
+        t = text.lower()
+        for term in terms:
+            if re.search(r"(?<![a-z0-9])" + re.escape(term.lower()) + r"(?![a-z0-9])", t):
+                return term
+        return ""
+
+    def brand(self, text: str) -> str:
+        """Our own brand term found in text, or ''."""
+        return self._find(text, self.brand_terms)
+
+    def competitor(self, text: str) -> str:
+        return self._find(text, self.competitors)
+
+
+def load_brand_rules(path: Optional[Path] = None) -> BrandRules:
+    data = load_yaml(path or CONFIG_DIR / "programs.yaml")
+    return BrandRules(list(data.get("brand_terms") or []), list(data.get("competitors") or []))
 
 
 def assign_cluster(text: str, clusters: List[Cluster]) -> Optional[str]:

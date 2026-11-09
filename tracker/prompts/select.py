@@ -18,6 +18,7 @@ from .generate import Candidate
 
 W_INTENT, W_DEMAND, W_AIO, W_PROGRAM = 0.35, 0.30, 0.25, 0.10
 MIN_WORDS, MAX_WORDS = 3, 12
+MIN_WORDS_GSC = 2  # real queries like "fde salary" are short but genuine
 
 ACTIVE, DROPPED = "active", "dropped"
 
@@ -84,15 +85,19 @@ def select_prompts(
     max_weight = max(weights.values(), default=1.0)
     max_imp = max((g.impressions for g in gsc), default=0)
 
-    decisions = [Decision(candidate=c, sources=[f"blog: {c.source_blog}"]) for c in candidates]
+    decisions = [Decision(candidate=c, sources=[f"blog: {c.source_blog}"] if c.source_blog else [])
+                 for c in candidates]
     pending: List[Decision] = []
 
     # 1. sanity + exact duplicates
     seen = set()
     for d in decisions:
         n = len(d.prompt.split())
-        if not MIN_WORDS <= n <= MAX_WORDS:
-            d.reason = f"length {n} words outside {MIN_WORDS}-{MAX_WORDS}"
+        min_words = MIN_WORDS_GSC if d.candidate.source == "gsc" else MIN_WORDS
+        if d.candidate.pre_drop:
+            d.reason = d.candidate.pre_drop
+        elif not min_words <= n <= MAX_WORDS:
+            d.reason = f"length {n} words outside {min_words}-{MAX_WORDS}"
         elif d.prompt in seen:
             d.reason = "exact duplicate"
         else:

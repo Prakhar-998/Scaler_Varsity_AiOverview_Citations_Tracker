@@ -48,6 +48,7 @@ class Candidate:
     source: str = "llm"        # "llm" (drafted per blog) or "gsc" (real GSC query)
     competitor: bool = False   # names a competitor brand, e.g. "fde academy course fees"
     impressions: int = 0       # GSC impressions, for gsc-sourced candidates
+    pre_drop: str = ""         # reason the source already rejected it; select_prompts logs it as dropped
 
 
 def classify_intent(prompt: str):

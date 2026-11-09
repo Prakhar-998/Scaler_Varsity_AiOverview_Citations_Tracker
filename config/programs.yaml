@@ -12,3 +12,36 @@ clusters:
     active: true
     weight: 1.0
     match_terms: ["generative ai", "genai", "gen ai", "llm", "prompt engineering", "agentic ai", "ai engineer"]
+
+# Branded queries (our own brands) are dropped from GSC candidates: they don't measure reach.
+brand_terms: ["scaler", "interviewbit", "interview bit", "varsity"]
+
+# Competitor brands: kept, and tagged competitor=yes in the Prompts tab.
+# Starter list; review it against the competing domains seen in Checks.
+competitors:
+  - fde academy
+  - upgrad
+  - simplilearn
+  - great learning
+  - coursera
+  - udemy
+  - edureka
+  - intellipaat
+  - naresh it
+  - nareshit
+  - learnbay
+  - applied ai course
+  - appliedaicourse
+  - analytics vidhya
+  - geeksforgeeks
+  - masai
+  - almabetter
+  - newton school
+  - coding ninjas
+  - pw skills
+  - physics wallah
+  - iit
+  - iisc
+  - nptel
+  - deeplearning.ai
+  - datacamp
