@@ -177,3 +177,30 @@ def test_no_limit_drafts_all_blogs(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "make_drafter", lambda settings: Drafter())
     _select(tmp_path, monkeypatch, "--source", "llm", "--no-probe")
     assert len(seen) == 2
+
+
+def test_provider_flag_after_the_command(tmp_path, monkeypatch, capsys):
+    assert cli.main(["probe", "--provider", "fake", "what is a forward deployed engineer"]) == 0
+    assert "status: no_aio" in capsys.readouterr().out
+
+
+def test_serp_provider_env_selects_provider_for_every_command(tmp_path, monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setenv("SERP_PROVIDER", "fake")
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    (tmp_path / "active.json").write_text(json.dumps([{"prompt": "a", "cluster": "fde"}]))
+    with caplog.at_level(logging.INFO):
+        assert cli.main(["probe", "q"]) == 0
+        assert cli.main(["check", "--dry-run"]) == 0
+        code, _ = _select(tmp_path, monkeypatch, "--source", "gsc", blogs=False)
+    assert code == 0
+    assert caplog.text.count("SERP provider: fake") == 3
+
+
+def test_flag_beats_env_and_missing_credentials_are_a_clear_error(monkeypatch, caplog):
+    monkeypatch.setenv("SERP_PROVIDER", "fake")
+    assert cli.main(["probe", "--provider", "dataforseo", "q"]) == 2
+    assert "SERP provider 'dataforseo': DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD must be set" in caplog.text
+    assert "Traceback" not in caplog.text

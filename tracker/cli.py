@@ -3,6 +3,8 @@
   python -m tracker select --blogs data/blogs.csv --gsc data/gsc.csv [--dry-run]
   python -m tracker check [--dry-run] [--save-raw]      # run twice a day at different times
   python -m tracker probe "best generative ai course in india"   # one SERP call, for spot checks
+
+Every command takes --provider serphouse|dataforseo|fake (default: SERP_PROVIDER, else serphouse).
 """
 from __future__ import annotations
 
@@ -26,6 +28,7 @@ from tracker.prompts import ACTIVE, LLMDrafter, draft_candidates, gsc_candidates
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
 ACTIVE_PROMPTS = RUNS / "active_prompts.json"
+PROVIDERS = ("serphouse", "dataforseo", "fake")
 
 
 def load_dotenv(path: Path = ROOT / ".env") -> None:
@@ -45,6 +48,20 @@ def make_writer(dry_run: bool, stamp: str):
         log.info("dry run: writing CSVs to %s instead of Sheets", out)
         return CsvWriter(out)
     return SheetsWriter(os.environ.get("SHEET_ID", ""), os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""))
+
+
+class ProviderError(Exception):
+    """The chosen SERP provider can't be built (unknown name or missing credentials)."""
+
+
+def make_provider(args, budget: CallBudget):
+    name = (args.provider or os.environ.get("SERP_PROVIDER") or "serphouse").lower()
+    try:
+        provider = get_provider(name, budget)
+    except ValueError as exc:
+        raise ProviderError(f"SERP provider {name!r}: {exc}") from None
+    log.info("SERP provider: %s", provider.name)
+    return provider
 
 
 def make_drafter(settings) -> Optional[LLMDrafter]:
@@ -87,7 +104,7 @@ def cmd_select(args, settings) -> int:
         candidates += drafted
 
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
-    provider = None if args.no_probe else get_provider(args.provider, budget)
+    provider = None if args.no_probe else make_provider(args, budget)
     decisions = select_prompts(candidates, gsc, clusters, provider, settings)
     kept = [d for d in decisions if d.status == ACTIVE]
     log.info("kept %d of %d candidates; %d probe SERP calls", len(kept), len(decisions), budget.used)
@@ -125,7 +142,7 @@ def cmd_check(args, settings) -> int:
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     if len(prompts) > budget.max_calls:
         log.warning("%d prompts but budget is %d calls; later prompts will be skipped", len(prompts), budget.max_calls)
-    provider = get_provider(args.provider, budget)
+    provider = make_provider(args, budget)
     now = datetime.now()
     stamp = now.strftime("%Y%m%d-%H%M%S")
     raw_dir = None
@@ -144,7 +161,7 @@ def cmd_check(args, settings) -> int:
 
 
 def cmd_probe(args, settings) -> int:
-    provider = get_provider(args.provider, CallBudget(3))
+    provider = make_provider(args, CallBudget(3))
     result: SerpResult = provider.fetch_ai_overview(args.query)
     if args.save:
         Path(args.save).write_text(json.dumps(result.raw, indent=2))
@@ -160,7 +177,7 @@ def cmd_probe(args, settings) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="tracker", description="AI Overview citation tracker (Varsity)")
     p.add_argument("-v", "--verbose", action="store_true")
-    p.add_argument("--provider", help="override SERP_PROVIDER (serphouse | fake)")
+    p.add_argument("--provider", choices=PROVIDERS, help="override SERP_PROVIDER")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("select", help="draft, filter and score prompts")
@@ -181,6 +198,11 @@ def build_parser() -> argparse.ArgumentParser:
     pr = sub.add_parser("probe", help="fetch one query and print the parsed result")
     pr.add_argument("query")
     pr.add_argument("--save", help="write the raw response JSON to this path")
+
+    # also accepted after the command name; SUPPRESS keeps a value given before it
+    for sp in (s, c, pr):
+        sp.add_argument("--provider", choices=PROVIDERS, default=argparse.SUPPRESS,
+                        help="SERP provider for this run; overrides SERP_PROVIDER")
     return p
 
 
@@ -189,7 +211,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s")
     load_dotenv()
     settings = load_settings()
-    return {"select": cmd_select, "check": cmd_check, "probe": cmd_probe}[args.cmd](args, settings)
+    try:
+        return {"select": cmd_select, "check": cmd_check, "probe": cmd_probe}[args.cmd](args, settings)
+    except ProviderError as exc:
+        log.error("%s", exc)
+        return 2
 
 
 if __name__ == "__main__":
