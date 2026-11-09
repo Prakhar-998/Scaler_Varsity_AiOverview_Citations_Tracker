@@ -65,9 +65,12 @@ Samples are in `data/sample/`. Keep real exports in `data/private/`, which is gi
 - **gsc**: queries from `--gsc` that match an active cluster's `match_terms` and contain a BOFU
   term (best, top, course(s), fee(s), cost, price, vs, versus, worth, certification, certificate,
   salary, training, program(me), institute, online, review(s), compare, which, near me).
-  - Queries naming our own brands (`brand_terms` in `config/programs.yaml`: Scaler,
-    InterviewBit, Varsity) are dropped.
-  - Competitor-brand queries (`competitors`) are kept and tagged `competitor = yes`.
+  - Own-brand queries (`brand_terms` in `config/programs.yaml`: Scaler, InterviewBit, Varsity)
+    are kept only as comparisons. If one also names a competitor or has a comparison word (vs,
+    versus, compare, better than, alternatives, difference between), it's tagged
+    `brand_comparison`, e.g. "scaler vs fde academy". Navigational or pure-brand queries
+    ("scaler login", "scaler fde course reviews", "interviewbit varsity") are dropped.
+  - Competitor-brand queries (`competitors`) are kept and tagged `competitor`.
   - Ranked by impressions; near-duplicates are dropped.
 - **llm**: an LLM drafts BOFU searches per blog, mainly to find searches we don't appear for in GSC.
   Models are tried in order from `llm.chain` in `config/settings.yaml`:
@@ -105,7 +108,7 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 
 | Tab | Columns |
 |---|---|
-| Prompts | prompt, cluster, source (gsc/llm), competitor, intent, score, status (active/dropped), reason, source inputs |
+| Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
 | Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
 | Summary | per cluster and ALL: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
 

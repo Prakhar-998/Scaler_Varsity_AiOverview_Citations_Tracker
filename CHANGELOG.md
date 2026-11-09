@@ -4,8 +4,9 @@
 
 ### Added
 - `--source gsc|llm|both` for `select` (default `both`). The GSC source uses real queries in an
-  active cluster with a BOFU term, drops our own brand queries, and tags competitor-brand ones.
-  It needs no LLM. The Prompts tab gets `source` and `competitor` columns.
+  active cluster with a BOFU term. It drops navigational and pure own-brand queries, keeps our
+  brand compared with a competitor (tagged `brand_comparison`), and tags competitor-brand
+  queries `competitor`. It needs no LLM. The Prompts tab gets `source` and `brand tag` columns.
 - Provider-agnostic LLM layer with a fallback chain in `settings.yaml`. The default is OpenRouter
   free models (`OPENROUTER_KEY` / `OPENROUTER_API_KEY`, `OPENROUTER_MODELS`); Gemini is optional
   and off. Each call has a 60s timeout and up to 2 retries on 429/5xx/529, and if every model

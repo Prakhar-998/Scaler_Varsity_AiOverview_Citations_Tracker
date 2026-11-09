@@ -103,8 +103,15 @@ Real GSC queries are now a candidate source of their own (`--source gsc`). It ne
 and always works. A query becomes a candidate when it matches an active cluster's
 `match_terms` and contains a BOFU term (best, fees, vs, worth, salary, training, near me, and
 so on). Then:
-- Our own brands (Scaler, InterviewBit, Varsity) are dropped. A branded search tells us about
-  brand demand, not about whether we reach people who don't know us yet.
+- Pure own-brand queries (Scaler, InterviewBit, Varsity) are dropped. That covers navigational
+  searches ("scaler login", "interviewbit varsity") and our brand alone ("scaler fde course
+  reviews"). They tell us about brand demand, not about whether we reach people who don't know us
+  yet, and Google answers them with our own pages anyway.
+- Own brand *compared with* someone else is kept and tagged `brand_comparison`. That means our
+  brand together with a competitor, or with a comparison word: vs, versus, compare, better than,
+  alternatives, difference between. "scaler vs fde academy" is a buyer choosing between us and a
+  rival, and whose pages the AI Overview cites there matters. "which" and a bare "or" don't count
+  as comparison words. "which scaler program is best" chooses between our own programs.
 - Competitor-brand queries ("fde academy course fees") are kept and tagged, because buyers
   comparing alternatives are exactly the audience we want.
 - Queries are ranked by impressions, and near-duplicates are dropped in favour of the
@@ -116,9 +123,9 @@ appear for: the gaps. With `--source both` (the default), GSC candidates go firs
 two overlap the GSC version, with its real demand, is kept and noted "also from llm". LLM
 candidates with no GSC match still have to show an AI Overview on a probe to survive.
 
-On the real FDE + GenAI export (2026-11-09), the GSC source alone gave 172 candidates (7 branded
-and 52 near-duplicates dropped) and filled the top 50 (18 FDE, 32 GenAI, 7 competitor) with no
-LLM or SERP calls. Two-word GSC queries are allowed ("fde salary"). LLM drafts still need at
+On the real FDE + GenAI export (2026-11-09), the GSC source alone gave 172 candidates and filled
+the top 50 (8 competitor, 1 brand_comparison) with no LLM or SERP calls. Along the way, 6 pure-brand
+and 52 near-duplicate queries were dropped. Two-word GSC queries are allowed ("fde salary"). LLM drafts still need at
 least 3 words.
 
 ## LLM provider fallback after the Gemini outages
