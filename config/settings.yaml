@@ -3,6 +3,13 @@ max_serp_calls: 300
 # Devices to check (desktop, mobile). `check` runs every prompt once per device; `select` probes and
 # `probe` use the first. --device overrides this per run.
 devices: [desktop]
+# Default SERP provider per command. select probes only need "is an AI Overview shown?", which
+# SERPHouse answers even when it misses the sources; check (and probe, for spot checks) need the
+# sources, which only DataForSEO returns reliably. --provider, then SERP_PROVIDER, override these.
+serp_provider:
+  select: serphouse
+  check: dataforseo
+  probe: dataforseo
 # Prompt layer
 candidates_per_blog: 4
 keep_top: 50

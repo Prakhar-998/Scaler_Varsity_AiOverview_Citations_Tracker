@@ -252,3 +252,19 @@ def test_probe_uses_first_device(monkeypatch, caplog):
     with caplog.at_level(logging.INFO):
         assert cli.main(["probe", "--provider", "fake", "q"]) == 0
     assert "SERP provider: fake (desktop)" in caplog.text
+
+
+def test_per_command_default_provider(monkeypatch):
+    settings = cli.load_settings()
+    parse = cli.build_parser().parse_args
+    assert cli.provider_name(parse(["check"]), settings) == "dataforseo"
+    assert cli.provider_name(parse(["probe", "q"]), settings) == "dataforseo"
+    assert cli.provider_name(parse(["select", "--gsc", "x.csv"]), settings) == "serphouse"
+    assert cli.provider_name(parse(["check", "--provider", "serphouse"]), settings) == "serphouse"
+
+
+def test_serp_provider_env_overrides_the_default_with_a_warning(monkeypatch, caplog):
+    monkeypatch.setenv("SERP_PROVIDER", "serphouse")
+    args = cli.build_parser().parse_args(["check"])
+    assert cli.provider_name(args, cli.load_settings()) == "serphouse"
+    assert "SERP_PROVIDER=serphouse overrides the check default (dataforseo)" in caplog.text
