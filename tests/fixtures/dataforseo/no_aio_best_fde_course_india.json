@@ -1,0 +1,78 @@
+{
+  "version": "0.1.20261020",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "6.1 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "11091200-0000-0000-0000-000000000000",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "6.0 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "serp",
+        "google",
+        "organic",
+        "live",
+        "advanced"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "organic",
+        "keyword": "best forward deployed engineer course in india",
+        "location_code": 2356,
+        "language_code": "en",
+        "device": "mobile",
+        "os": "android",
+        "load_async_ai_overview": true
+      },
+      "result": [
+        {
+          "keyword": "best forward deployed engineer course in india",
+          "type": "organic",
+          "se_domain": "google.com",
+          "location_code": 2356,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=best+forward+deployed+engineer+course+in+india&hl=en&gl=IN",
+          "datetime": "2026-11-09 06:30:00 +00:00",
+          "item_types": [
+            "organic"
+          ],
+          "items_count": 2,
+          "items": [
+            {
+              "type": "organic",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "domain": "fde.academy",
+              "title": "FDE Academy: Become a Forward Deployed Engineer",
+              "url": "https://fde.academy/",
+              "breadcrumb": "https://fde.academy \u203a ",
+              "description": "..."
+            },
+            {
+              "type": "organic",
+              "rank_group": 2,
+              "rank_absolute": 2,
+              "position": "left",
+              "domain": "www.interviewbit.com",
+              "title": "What Is a Forward Deployed Engineer?",
+              "url": "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer/",
+              "breadcrumb": "https://www.interviewbit.com \u203a varsity \u203a blog \u203a forward-deployed-engineer",
+              "description": "..."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

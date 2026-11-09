@@ -1,0 +1,158 @@
+{
+  "version": "0.1.20261020",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "6.1 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "11091200-0000-0000-0000-000000000000",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "6.0 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "serp",
+        "google",
+        "organic",
+        "live",
+        "advanced"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "organic",
+        "keyword": "forward deployed engineer salary in india",
+        "location_code": 2356,
+        "language_code": "en",
+        "device": "mobile",
+        "os": "android",
+        "load_async_ai_overview": true
+      },
+      "result": [
+        {
+          "keyword": "forward deployed engineer salary in india",
+          "type": "organic",
+          "se_domain": "google.com",
+          "location_code": 2356,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=forward+deployed+engineer+salary+in+india&hl=en&gl=IN",
+          "datetime": "2026-11-09 06:30:00 +00:00",
+          "item_types": [
+            "ai_overview",
+            "organic"
+          ],
+          "items_count": 4,
+          "items": [
+            {
+              "type": "ai_overview",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "position": "left",
+              "markdown": "Forward deployed engineers in India typically earn ...",
+              "items": [
+                {
+                  "type": "ai_overview_element",
+                  "position": "left",
+                  "title": null,
+                  "text": "Forward deployed engineers in India typically earn ...",
+                  "references": [
+                    {
+                      "type": "ai_overview_reference",
+                      "source": "Glassdoor",
+                      "domain": "www.glassdoor.co.in",
+                      "url": "https://www.glassdoor.co.in/Salaries/forward-deployed-engineer-salary-SRCH_KO0,25.htm",
+                      "title": "Forward Deployed Engineer Salaries in India",
+                      "text": null
+                    },
+                    {
+                      "type": "ai_overview_reference",
+                      "source": "InterviewBit",
+                      "domain": "www.interviewbit.com",
+                      "url": "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer-salary/?utm_source=google",
+                      "title": "Forward Deployed Engineer Salary in India &amp; Career Path",
+                      "text": null
+                    },
+                    {
+                      "type": "ai_overview_reference",
+                      "source": "Palantir",
+                      "domain": "www.palantir.com",
+                      "url": "https://www.palantir.com/careers/",
+                      "title": "Careers",
+                      "text": null
+                    }
+                  ]
+                }
+              ],
+              "references": [
+                {
+                  "type": "ai_overview_reference",
+                  "source": "Glassdoor",
+                  "domain": "www.glassdoor.co.in",
+                  "url": "https://www.glassdoor.co.in/Salaries/forward-deployed-engineer-salary-SRCH_KO0,25.htm",
+                  "title": "Forward Deployed Engineer Salaries in India",
+                  "text": null
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "source": "AmbitionBox",
+                  "domain": "www.ambitionbox.com",
+                  "url": "https://www.ambitionbox.com/profile/forward-deployed-engineer-salary",
+                  "title": "Forward Deployed Engineer Salary in India 2026",
+                  "text": null
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "source": "InterviewBit",
+                  "domain": "www.interviewbit.com",
+                  "url": "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer-salary/?utm_source=google",
+                  "title": "Forward Deployed Engineer Salary in India &amp; Career Path",
+                  "text": null
+                }
+              ],
+              "asynchronous_ai_overview": true
+            },
+            {
+              "type": "organic",
+              "rank_group": 1,
+              "rank_absolute": 2,
+              "position": "left",
+              "domain": "www.glassdoor.co.in",
+              "title": "Forward Deployed Engineer Salaries in India",
+              "url": "https://www.glassdoor.co.in/Salaries/forward-deployed-engineer-salary-SRCH_KO0,25.htm",
+              "breadcrumb": "https://www.glassdoor.co.in \u203a Salaries \u203a forward-deployed-engineer-salary-SRCH_KO0,25.htm",
+              "description": "..."
+            },
+            {
+              "type": "organic",
+              "rank_group": 2,
+              "rank_absolute": 3,
+              "position": "left",
+              "domain": "www.interviewbit.com",
+              "title": "Forward Deployed Engineer Salary in India",
+              "url": "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer-salary/",
+              "breadcrumb": "https://www.interviewbit.com \u203a varsity \u203a blog \u203a forward-deployed-engineer-salary",
+              "description": "..."
+            },
+            {
+              "type": "organic",
+              "rank_group": 3,
+              "rank_absolute": 4,
+              "position": "left",
+              "domain": "www.ambitionbox.com",
+              "title": "Forward Deployed Engineer Salary 2026",
+              "url": "https://www.ambitionbox.com/profile/forward-deployed-engineer-salary",
+              "breadcrumb": "https://www.ambitionbox.com \u203a profile \u203a forward-deployed-engineer-salary",
+              "description": "..."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
