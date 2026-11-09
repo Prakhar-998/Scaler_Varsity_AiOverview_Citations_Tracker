@@ -46,7 +46,7 @@ cp .env.example .env   # fill in keys; never commit .env
 
 | Variable | Purpose |
 |---|---|
-| `SERP_PROVIDER` | `serphouse` (default), `dataforseo` or `fake`; `--provider` overrides it per command |
+| `SERP_PROVIDER` | optional; forces one provider (`serphouse`, `dataforseo`, `fake`) for every command. Leave unset to use the per-command defaults |
 | `SERPHOUSE_API_KEY` | SERPHouse API key |
 | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | DataForSEO API login and password (from the DataForSEO dashboard) |
 | `OPENROUTER_KEY` | OpenRouter key, the default LLM for drafting (`OPENROUTER_API_KEY` also works) |
@@ -62,16 +62,23 @@ Inputs:
 
 Samples are in `data/sample/`. Keep real exports in `data/private/`, which is gitignored.
 
-### SERP providers
-Both adapters fetch google.com, India, English, mobile, and return the same statuses.
-- **serphouse** (default): `POST /serp/live`. For most commercial queries it returns the AI Overview
-  without its sources (`incomplete`): 15 of 15 in one `select` run.
-- **dataforseo**: `POST /v3/serp/google/organic/live/advanced` with `location_code` 2356 and
-  `load_async_ai_overview: true`, which waits for AI Overviews that load late. Use this for `check`
-  when the incomplete rate is high.
+### SERP providers and devices
+Both adapters fetch google.com, India, English, for the configured device, and return the same statuses.
+- **dataforseo** (default for `check` and `probe`): `POST /v3/serp/google/organic/live/advanced`
+  with `location_code` 2356 and `load_async_ai_overview: true`, which returns complete AI Overviews.
+  About $0.004 per call; `check` logs the estimated cost (checks × rate) before it starts.
+- **serphouse** (default for `select` probes): `POST /serp/live`. For most commercial queries it
+  returns the AI Overview without its sources (`incomplete`): 15 of 15 in one `select` run. That is
+  enough for a probe, which only asks whether an AI Overview is shown.
 
-Pick one with `SERP_PROVIDER` in `.env`, or `--provider` before or after the command name.
-The provider in use is logged at the start of every run.
+The per-command defaults are `serp_provider` in `config/settings.yaml`. `--provider` (before or
+after the command name) overrides them, then `SERP_PROVIDER`. The provider and device in use are
+logged at the start of every run.
+
+Devices come from `devices` in `config/settings.yaml` (default `[desktop]`; set `[mobile, desktop]`
+to check both). `--device desktop|mobile` overrides it for one run and can be repeated. `check` runs
+every prompt once per device; `select` probes and `probe` use the first device. Mobile citations
+are only partly matched for now (see "Mobile references" in `docs/decisions.md`).
 
 ### Candidate sources
 - **gsc**: queries from `--gsc` that match an active cluster's `match_terms` and contain a BOFU
@@ -112,8 +119,9 @@ The provider in use is logged at the start of every run.
 # spot-check one query against what you see on Google
 .venv/bin/python -m tracker probe "best generative ai course in india" --save /tmp/raw.json
 
-# same, through DataForSEO (works for select and check too)
-.venv/bin/python -m tracker probe --provider dataforseo "forward deployed engineer salary in india"
+# check both devices this run, or probe through SERPHouse instead of DataForSEO
+.venv/bin/python -m tracker check --dry-run --device desktop --device mobile
+.venv/bin/python -m tracker probe --provider serphouse "forward deployed engineer salary in india"
 ```
 
 Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to `runs/dry-run-*/`.
@@ -124,17 +132,22 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
-| Checks | date, time, prompt, cluster, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
-| Summary | per cluster and ALL: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
+| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
+| Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
 
-Sample `Checks` rows, built from the real SERPHouse fixtures:
+Sample `Checks` rows, built from the real DataForSEO and SERPHouse fixtures:
 
 ```
-date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,brand cited,organic rank,rank match,competing domains,check status,error
-2026-11-06,17:12,what is a forward deployed engineer,fde,yes,no,,,no,,,"linkedin.com, iit.edu, posthog.com, roadmap.sh, nareshit.com",ok,
-2026-11-06,17:08,forward deployed engineer salary in india,fde,yes,,,,,,,,incomplete,AI Overview sources did not load
-2026-11-05,18:19,best forward deployed engineer course in india,fde,no,,,,,,,,no_aio,
+date,time,prompt,cluster,device,ai overview shown,varsity cited,cited url,position,brand cited,organic rank,rank match,competing domains,check status,error
+2026-11-09,17:12,forward deployed engineer salary in india,fde,desktop,yes,no,,,no,,,"linkedin.com, fde.academy, ambitionbox.com, buildfastwithai.com, secondtalent.com, nareshit.com",ok,
+2026-11-09,17:08,forward deployed engineer salary in india,fde,mobile,yes,no,,,no,,,"arivuskills.com, glassdoor.co.in",ok,
+2026-11-06,17:08,forward deployed engineer salary in india,fde,mobile,yes,,,,,,,,incomplete,AI Overview sources did not load
+2026-11-05,18:19,best forward deployed engineer course in india,fde,mobile,no,,,,,,,,no_aio,
 ```
+
+The first two rows are DataForSEO and the last two SERPHouse. SERPHouse missed the sources for
+the same query. The mobile DataForSEO row lists only 2 competing domains because 4 of its 6
+references are opaque `google.com/goto` links.
 
 ## Tests
 
@@ -143,9 +156,8 @@ date,time,prompt,cluster,ai overview shown,varsity cited,cited url,position,bran
 ```
 
 All tests run offline, using fake providers and fake HTTP sessions. The SERPHouse tests use real
-captured responses in `tests/fixtures/serphouse/`. The DataForSEO fixtures in
-`tests/fixtures/dataforseo/` are hand-written from the API docs until real captures replace them
-(see the README in that folder).
+captured responses in `tests/fixtures/serphouse/`. The DataForSEO tests use real
+captures in `tests/fixtures/dataforseo/` (see the README in that folder).
 
 ## Layout
 

@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- `devices` setting (default `[desktop]`) and a repeatable `--device desktop|mobile` flag. `check`
+  runs every prompt once per device. Checks gets a `device` column after `cluster`, and the Summary
+  is broken down by device.
+- `check` logs the estimated cost (checks × `cost_per_check_usd`, $0.004 for DataForSEO) before it
+  starts.
+- Per-command default SERP provider (`serp_provider` in `settings.yaml`): DataForSEO for `check`
+  and `probe`, SERPHouse for `select` probes.
 - DataForSEO SERP adapter (`SERP_PROVIDER=dataforseo`): `POST /v3/serp/google/organic/live/advanced`
   for India (`location_code` 2356), English, mobile, with `load_async_ai_overview` so AI Overviews
   that load late come back with their sources. Credentials come from `DATAFORSEO_LOGIN` /
@@ -43,6 +50,9 @@
 - Offline test suite.
 
 ### Changed
+- `SERP_PROVIDER` is now optional. When set, it overrides the per-command defaults for every
+  command, with a warning. It is commented out in `.env.example`.
+- The hand-written DataForSEO fixtures were replaced with real mobile and desktop captures.
 - `select` probes no longer retry incomplete AI Overviews. An incomplete result already proves an
   AI Overview is shown, so the retry only spent a SERP call. `check` still retries once.
 - Gemini is no longer the default drafter, and a Gemini 404 no longer stops `select`; the chain
@@ -58,6 +68,12 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- DataForSEO organic results: `url` is a `google.com/goto` redirect on both devices, so the site now
+  comes from `breadcrumb` (the `domain` field is always google.com).
+- Opaque `google.com/goto` AI Overview references are no longer reported as a "google.com"
+  competing domain.
+- A DataForSEO response with no tasks now includes the envelope's `status_code` and
+  `status_message` in the error.
 - Whitespace and newlines inside GSC queries are collapsed.
 - Tests no longer read the real `.env`, so they can't reach the network with live keys.
 - If the Gemini model returns 404, `select` now exits with a clear message naming the model and

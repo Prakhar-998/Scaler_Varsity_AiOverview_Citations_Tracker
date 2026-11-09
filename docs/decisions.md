@@ -172,6 +172,51 @@ above, so SERPHouse alone can't give a citation rate for BOFU searches.
   `--provider`). A sensible split is SERPHouse for cheap `select` probes, where incomplete is
   fine, and DataForSEO for `check`.
 
-The DataForSEO fixtures are hand-written from the documented response shape, because no live
-call had been made yet. Replace them with `probe --provider dataforseo --save` captures on the
-first run and re-check the parser against them.
+The first DataForSEO fixtures were hand-written from the docs. The real captures (below) replaced them.
+
+## DataForSEO for checks, desktop first (2026-11-09)
+**Found:** the real captures (`tests/fixtures/dataforseo/`, same query on mobile and desktop) came
+back complete: 6 sources each, where SERPHouse had returned only the AI Overview title. Three
+details differed from the docs:
+- **Organic `url`s are `google.com/goto` redirects on desktop too**, with `domain: google.com`. The
+  real site is only in `breadcrumb`, so organic rank is a domain-level match (`rank match = domain`)
+  on both providers and both devices.
+- **The sources list isn't every source.** On desktop, `references[]` had 3 entries, and the
+  per-section `items[].references[]` cited 3 more. We record the list first, then the extra inline
+  ones, deduped by URL, so a Varsity page cited only inline still counts.
+- **An OK envelope can have no tasks.** One call returned `status_code` 20000 "Ok." with
+  `tasks: []` and cost 0. It is recorded as `failed`, and the error names the envelope status.
+
+**Decisions:**
+- **Provider per command.** `check` and `probe` default to DataForSEO, because they need the
+  sources. `select` probes default to SERPHouse, because they only need "is an AI Overview shown?",
+  and an incomplete result answers that.
+- **Desktop first.** `devices: [desktop]`. Desktop references carry real URLs, so Varsity
+  matching works. Mobile is a list entry away (`[mobile, desktop]`), but see the next entry.
+- **Budget.** About $1 of credit at $0.004 per call is about 250 checks: 50 prompts × 1 device × 2
+  runs a day uses $0.40 a day. `check` logs the estimate before it starts, and `max_serp_calls`
+  still caps every run.
+- **Summary by device.** Mobile and desktop AI Overviews differ for the same query, so rates are
+  never pooled across devices within a cluster. Only the ALL / ALL row combines them.
+
+## Mobile references: source/title matching is the V1 follow-up
+On mobile, 4 of the 6 DataForSEO references were `google.com/goto?url=CAES…` links: the same
+opaque protobuf as SERPHouse's mobile organic links, with `domain: google.com`. Each one still has
+a usable `source` ("AmbitionBox", "Arivu Skills") and page `title`.
+
+**Not built in the prototype.** Matching on these isn't small:
+- `varsity_cited` would mean matching the reference `title` against Varsity blog titles. `check`
+  doesn't load `blogs.csv` today, and titles get rewritten in the AI Overview, so it needs fuzzy
+  matching and a review of false positives.
+- `brand_cited` needs a `source` → brand map ("InterviewBit", "Scaler"), and Varsity posts show
+  under the InterviewBit source too, so a source match alone can't tell Varsity from other brand pages.
+- The same page can appear twice, once as a real URL and once as a `goto` link (Arivu Skills,
+  Glassdoor in the mobile capture). Deduping by source + title would change citation positions.
+- Competing "domains" would be source names, not domains.
+
+**For now:** opaque references keep their position in the list, so a later Varsity reference still
+gets its real position. They are left out of competing domains rather than counted as
+"google.com". Mobile checks would undercount Varsity citations, which is why desktop is the default.
+**V1:** match opaque references by title against `blogs.csv` (rapidfuzz, with a threshold tuned on
+real captures) and by `source` for brand. Record the match level as `url` / `title` / `source`,
+the same way `rank match` does.
