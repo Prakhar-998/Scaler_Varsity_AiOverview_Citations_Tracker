@@ -12,6 +12,10 @@ def get_provider(name: Optional[str] = None, budget: Optional[CallBudget] = None
     if name == "serphouse":
         from .serphouse import SerphouseProvider
         return SerphouseProvider(os.environ.get("SERPHOUSE_API_KEY", ""), budget=budget)
+    if name == "dataforseo":
+        from .dataforseo import DataForSeoProvider
+        return DataForSeoProvider(os.environ.get("DATAFORSEO_LOGIN", ""), os.environ.get("DATAFORSEO_PASSWORD", ""),
+                                  budget=budget)
     if name == "fake":
         from .fake import FakeProvider
         return FakeProvider(budget=budget)
