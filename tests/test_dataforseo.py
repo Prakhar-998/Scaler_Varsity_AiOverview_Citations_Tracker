@@ -119,7 +119,7 @@ def test_task_error_is_failed_not_no_aio(load_fixture):
 def test_real_empty_tasks_error_names_the_envelope_status(load_fixture):
     result = parse_response("q", load_fixture(NO_TASKS))
     assert result.status == STATUS_FAILED
-    assert result.error.startswith("no tasks in response")
+    assert result.error == "no tasks in response (status 20000 Ok.)"
 
 
 def test_envelope_error_is_failed():

@@ -131,7 +131,8 @@ def parse_response(query: str, body: Dict[str, Any]) -> SerpResult:
     tasks = body.get("tasks")
     task = tasks[0] if isinstance(tasks, list) and tasks and isinstance(tasks[0], dict) else None
     if task is None:
-        return SerpResult.failed(query, "no tasks in response", body)
+        status = f"{body.get('status_code')} {body.get('status_message') or ''}".strip()
+        return SerpResult.failed(query, f"no tasks in response (status {status})", body)
     if task.get("status_code") != OK_CODE:
         return SerpResult.failed(query, f"task status: {task.get('status_code')} {task.get('status_message', '')}"
                                  .strip(), body)
