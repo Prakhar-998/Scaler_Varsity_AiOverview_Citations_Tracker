@@ -2,26 +2,6 @@
 
 ## [Unreleased]
 
-### Changed
-- Default Gemini model is now `gemini-3.8-flash`; `gemini-2.5-flash` is no longer available to new
-  users. Set it with `gemini_model` in `config/settings.yaml` or the `GEMINI_MODEL` env var
-  (the env var wins).
-
-### Fixed
-- If the Gemini model returns 404, `select` now exits with a clear message naming the model and
-  how to change it, instead of a traceback.
-- Organic rank is now recorded on `no_aio` and `incomplete` checks, not only `ok` ones.
-- SERPHouse requests now always send `tbs: ""`. SERPHouse added Google Verbatim (`tbs=li:1`) by
-  default, which suppressed AI Overviews.
-- SERPHouse requests use `POST /serp/live` with a JSON `{"data": {...}}` body. The GET `gl`/`hl`
-  format returned `check_html_manually` errors.
-
-### Changed
-- The parser reads the confirmed SERPHouse shape, `results.results.ai_overview.references[]`
-  (`link`, `source`, `title`); the guessed field names are gone. HTML entities in titles are decoded.
-- The hand-written SERPHouse fixtures were replaced with real captures in `tests/fixtures/serphouse/`.
-- AI Overview presence % now counts incomplete AI Overviews as detected.
-
 ### Added
 - Google redirect links (`/url?q=`, `/goto?url=`) are decoded during URL normalisation when the
   destination is readable.
@@ -31,9 +11,6 @@
   checks are retried once (the retry counts toward the SERP call cap) and are kept out of the
   citation rate.
 - `incomplete` count and `incomplete rate %` columns in the Summary.
-
-
-### Added
 - SERP provider adapter interface with a SERPHouse adapter (google.com, India, English, mobile),
   a fake provider, retries, and a per-run SERP call budget.
 - URL normalisation (www, scheme, trailing slash, query/UTM, fragments, AMP variants) and
@@ -46,3 +23,21 @@
 - Prompts / Checks / Summary output to Google Sheets, or CSVs with `--dry-run`.
 - `select`, `check` and `probe` commands.
 - Offline test suite.
+
+### Changed
+- Default Gemini model is now `gemini-3.8-flash`; `gemini-2.5-flash` is no longer available to new
+  users. Set it with `gemini_model` in `config/settings.yaml` or the `GEMINI_MODEL` env var
+  (the env var wins).
+- The parser reads the confirmed SERPHouse shape, `results.results.ai_overview.references[]`
+  (`link`, `source`, `title`); the guessed field names are gone. HTML entities in titles are decoded.
+- The hand-written SERPHouse fixtures were replaced with real captures in `tests/fixtures/serphouse/`.
+- AI Overview presence % now counts incomplete AI Overviews as detected.
+
+### Fixed
+- If the Gemini model returns 404, `select` now exits with a clear message naming the model and
+  how to change it, instead of a traceback.
+- Organic rank is now recorded on `no_aio` and `incomplete` checks, not only `ok` ones.
+- SERPHouse requests now always send `tbs: ""`. SERPHouse added Google Verbatim (`tbs=li:1`) by
+  default, which suppressed AI Overviews.
+- SERPHouse requests use `POST /serp/live` with a JSON `{"data": {...}}` body. The GET `gl`/`hl`
+  format returned `check_html_manually` errors.
