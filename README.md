@@ -46,6 +46,7 @@ cp .env.example .env   # fill in keys; never commit .env
 | `SERP_PROVIDER` | `serphouse` (default) or `fake` |
 | `SERPHOUSE_API_KEY` | SERPHouse API key |
 | `GEMINI_API_KEY` | drafts candidate searches |
+| `GEMINI_MODEL` | optional; overrides `gemini_model` in `config/settings.yaml` (default `gemini-3.8-flash`) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | path to the service account file, or the JSON itself |
 | `SHEET_ID` | the **test** sheet (share it with the service account email) |
 

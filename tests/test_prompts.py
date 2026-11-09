@@ -5,7 +5,8 @@ from tracker.checks.base import (CallBudget, Reference, SerpResult, STATUS_FAILE
 from tracker.checks.fake import FakeProvider
 from tracker.config import Blog, Cluster, GscQuery
 from tracker.prompts import ACTIVE, Candidate, classify_intent, draft_candidates, select_prompts
-from tracker.prompts.generate import clean_prompt, parse_searches
+from tracker.config import load_settings
+from tracker.prompts.generate import DEFAULT_GEMINI_MODEL, clean_prompt, parse_searches, resolve_gemini_model
 
 CLUSTERS = [Cluster("fde", "Forward Deployed Engineer", 1.0, True, ["fde"]),
             Cluster("genai", "Generative AI", 0.5, True, ["genai"])]
@@ -118,3 +119,15 @@ def test_every_candidate_gets_a_reason():
     cands = [cand("genai"), cand("best genai course in india"), cand("genai course fees")]
     ds = select_prompts(cands, [], CLUSTERS, FakeProvider(), SETTINGS)
     assert len(ds) == 3 and all(d.reason for d in ds)
+
+
+def test_gemini_model_default_settings_and_env_override(monkeypatch):
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    assert DEFAULT_GEMINI_MODEL == "gemini-3.8-flash"
+    assert resolve_gemini_model({}) == "gemini-3.8-flash"
+    assert resolve_gemini_model(load_settings()) == "gemini-3.8-flash"
+    assert resolve_gemini_model({"gemini_model": "from-settings"}) == "from-settings"
+    monkeypatch.setenv("GEMINI_MODEL", "from-env")
+    assert resolve_gemini_model({"gemini_model": "from-settings"}) == "from-env"
+    monkeypatch.setenv("GEMINI_MODEL", "  ")
+    assert resolve_gemini_model({"gemini_model": "from-settings"}) == "from-settings"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -64,8 +65,16 @@ def parse_searches(text: str) -> List[str]:
     return [s for s in items if isinstance(s, str)] if isinstance(items, list) else []
 
 
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+
+
+def resolve_gemini_model(settings: Dict) -> str:
+    """GEMINI_MODEL env var, then gemini_model in settings.yaml, then the default."""
+    return os.environ.get("GEMINI_MODEL", "").strip() or settings.get("gemini_model") or DEFAULT_GEMINI_MODEL
+
+
 class GeminiDrafter:
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str, model: str = DEFAULT_GEMINI_MODEL):
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set")
         from google import genai  # imported lazily so offline tests don't need it
