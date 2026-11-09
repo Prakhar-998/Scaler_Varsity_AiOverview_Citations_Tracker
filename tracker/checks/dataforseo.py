@@ -6,10 +6,16 @@ Endpoint: POST https://api.dataforseo.com/v3/serp/google/organic/live/advanced, 
 `load_async_ai_overview: true` makes DataForSEO wait for AI Overviews that load late, which
 SERPHouse returns without sources (see docs/decisions.md).
 
-Response shape (DataForSEO v3 docs; replace the hand-written fixtures with real captures):
+Response shape (confirmed from real captures in tests/fixtures/dataforseo/, 2026-11-09):
   status_code (20000 = ok), tasks[0].status_code, tasks[0].result[0].items[]
-  items[type=ai_overview]   references[] (url, domain, title, source), plus items[].references[]
-  items[type=organic]       rank_group (organic position), url, domain, title
+  items[type=ai_overview]   references[] (type, source, domain, title, url, text): the sources list;
+                            items[].references[]: inline citations per section, which on desktop
+                            include sources missing from the list
+  items[type=organic]       rank_group (organic position), title, breadcrumb, website_name
+                            `url` is an opaque google.com/goto redirect on mobile AND desktop, with
+                            domain "google.com"; the site is only in `breadcrumb`
+On mobile, many AI Overview references are also google.com/goto links; `source` and `title` still
+name the page (see docs/decisions.md, mobile follow-up).
 """
 from __future__ import annotations
 
@@ -30,6 +36,7 @@ from .base import (
     Reference,
     SerpProvider,
     SerpResult,
+    site_url,
 )
 
 log = logging.getLogger(__name__)
@@ -182,12 +189,12 @@ def _parse_organic(items: List[Dict[str, Any]]) -> List[OrganicResult]:
         if not isinstance(url, str) or not url:
             continue
         pos = item.get("rank_group")
-        domain = item.get("domain")
         out.append(OrganicResult(
             url=url,
             title=_text(item.get("title")),
             position=pos if isinstance(pos, int) else i,
-            display_url=f"https://{domain}" if isinstance(domain, str) and domain else "",
+            # `url` and `domain` are a google.com redirect; the breadcrumb shows the real site
+            display_url=site_url(item.get("breadcrumb")),
         ))
     return out
 

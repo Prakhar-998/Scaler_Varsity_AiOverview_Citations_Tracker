@@ -5,6 +5,7 @@ Every SERP provider implements `SerpProvider.fetch_ai_overview(query)` and retur
 """
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -51,6 +52,13 @@ class OrganicResult:
     # Site URL as shown on the result (domain, sometimes a breadcrumb). Used for a domain-level
     # rank when `url` is an opaque Google redirect. Empty when the result shows no site URL.
     display_url: str = ""
+
+
+def site_url(value: Any) -> str:
+    """'https://fde.academy › blog › ...' -> 'https://fde.academy'. Social results show text such as
+    '740+ reactions · 3 months ago' instead of a URL; those return ''."""
+    text = html.unescape(str(value or "")).strip().split("›")[0].strip()
+    return text if text.lower().startswith(("http://", "https://")) and " " not in text else ""
 
 
 @dataclass

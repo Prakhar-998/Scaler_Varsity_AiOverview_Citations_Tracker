@@ -39,15 +39,22 @@ def make(responses, **kw):
     return DataForSeoProvider("login", "pw", session=session, backoff=0, incomplete_delay=0, **kw), session
 
 
-AIO = "dataforseo/aio_fde_salary_india_mobile.json"
-NO_AIO = "dataforseo/no_aio_best_fde_course_india.json"
-TASK_ERROR = "dataforseo/task_error.json"
+MOBILE = "dataforseo/aio_fde_salary_india_mobile.json"
+DESKTOP = "dataforseo/aio_fde_salary_india_desktop.json"
+NO_TASKS = "dataforseo/no_tasks_ok_envelope.json"
+AIO = DESKTOP
+
+
+def items_of(body):
+    return body["tasks"][0]["result"][0]["items"]
 
 
 def incomplete(load_fixture):
     body = copy.deepcopy(load_fixture(AIO))
-    aio = body["tasks"][0]["result"][0]["items"][0]
-    aio["references"], aio["items"] = [], []
+    aio = next(i for i in items_of(body) if i["type"] == "ai_overview")
+    aio["references"] = []
+    for element in aio["items"]:
+        element["references"] = []
     return body
 
 
@@ -60,26 +67,41 @@ def test_request_body_and_auth(load_fixture):
                              "device": "mobile", "load_async_ai_overview": True}]
 
 
-def test_aio_references_in_order_with_nested_ones_after(load_fixture):
-    result = parse_response("q", load_fixture(AIO))
+def test_real_desktop_sources_list_then_inline_citations(load_fixture):
+    result = parse_response("forward deployed engineer salary in india", load_fixture(DESKTOP))
     assert result.status == STATUS_OK and result.shown
-    assert [domain_of(r.url) for r in result.references] == ["glassdoor.co.in", "ambitionbox.com",
-                                                             "interviewbit.com", "palantir.com"]
-    assert [r.position for r in result.references] == [1, 2, 3, 4]
-    assert result.references[2].title == "Forward Deployed Engineer Salary in India & Career Path"
+    # 3 in the sources list, then 3 more cited only inline in the overview's sections
+    assert [domain_of(r.url) for r in result.references] == [
+        "linkedin.com", "fde.academy", "ambitionbox.com", "buildfastwithai.com", "secondtalent.com", "nareshit.com"]
+    assert [r.position for r in result.references] == [1, 2, 3, 4, 5, 6]
+    assert result.references[1].source == "FDE Academy"
+    m = match_citations(result)
+    assert not m.varsity_cited and not m.brand_cited
+    assert m.competing_domains[:3] == ["linkedin.com", "fde.academy", "ambitionbox.com"]
 
 
-def test_varsity_citation_and_url_level_organic_rank(load_fixture):
-    m = match_citations(parse_response("q", load_fixture(AIO)))
-    assert m.varsity_cited and m.position == 3
-    assert m.organic_rank == 2 and m.rank_match == "url"  # DataForSEO organic URLs are real, not redirects
-    assert m.competing_domains == ["glassdoor.co.in", "ambitionbox.com", "palantir.com"]
+def test_real_mobile_references_keep_source_and_title_for_goto_links(load_fixture):
+    result = parse_response("forward deployed engineer salary in india", load_fixture(MOBILE))
+    assert result.status == STATUS_OK and len(result.references) == 6
+    goto = [r for r in result.references if domain_of(r.url) == "google.com"]
+    assert len(goto) == 4
+    assert [r.source for r in goto] == ["Reddit", "Arivu Skills", "AmbitionBox", "www.glassdoor.co.in"]
+    assert all(r.title for r in goto)
+
+
+def test_real_organic_urls_are_redirects_so_site_comes_from_breadcrumb(load_fixture):
+    organic = parse_response("q", load_fixture(DESKTOP)).organic
+    assert len(organic) == 9 and all(o.url.startswith("https://google.com/goto?url=") for o in organic)
+    assert organic[0].display_url == ""  # LinkedIn: "740+ reactions · 3 months ago"
+    assert organic[1].display_url == "https://www.ambitionbox.com"
+    assert [o.position for o in organic] == list(range(1, 10))  # rank_group, ignoring the AIO and PAA
 
 
 def test_no_aio_item_is_no_aio(load_fixture):
-    result = parse_response("q", load_fixture(NO_AIO))
-    assert result.status == STATUS_NO_AIO and not result.shown
-    assert [o.position for o in result.organic] == [1, 2]
+    body = copy.deepcopy(load_fixture(AIO))
+    body["tasks"][0]["result"][0]["items"] = [i for i in items_of(body) if i["type"] != "ai_overview"]
+    result = parse_response("q", body)
+    assert result.status == STATUS_NO_AIO and not result.shown and len(result.organic) == 9
 
 
 def test_aio_without_references_is_incomplete(load_fixture):
@@ -88,8 +110,16 @@ def test_aio_without_references_is_incomplete(load_fixture):
 
 
 def test_task_error_is_failed_not_no_aio(load_fixture):
-    result = parse_response("q", load_fixture(TASK_ERROR))
-    assert result.status == STATUS_FAILED and "40501" in result.error
+    body = copy.deepcopy(load_fixture(AIO))
+    body["tasks"][0].update(status_code=40501, status_message="Invalid Field: 'location_code'.", result=None)
+    result = parse_response("q", body)
+    assert result.status == STATUS_FAILED and "40501" in result.error and "location_code" in result.error
+
+
+def test_real_empty_tasks_error_names_the_envelope_status(load_fixture):
+    result = parse_response("q", load_fixture(NO_TASKS))
+    assert result.status == STATUS_FAILED
+    assert result.error.startswith("no tasks in response")
 
 
 def test_envelope_error_is_failed():

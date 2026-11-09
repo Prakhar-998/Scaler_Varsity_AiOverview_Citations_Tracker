@@ -30,6 +30,7 @@ from .base import (
     Reference,
     SerpProvider,
     SerpResult,
+    site_url,
 )
 
 log = logging.getLogger(__name__)
@@ -175,16 +176,10 @@ def _parse_organic(items: List[Any]) -> List[OrganicResult]:
             url=url,
             title=_text(item.get("title") or item.get("site_title")),
             position=pos if isinstance(pos, int) else i,
-            display_url=_display_url(item.get("displayed_link")),
+            display_url=site_url(item.get("displayed_link")),
         ))
     return out
 
-
-def _display_url(value: Any) -> str:
-    """'https://fde.academy › blog › ...' -> 'https://fde.academy'. Social results show text such as
-    '740+ reactions · 3 months ago' instead of a URL; those return ''."""
-    text = _text(value).split("›")[0].strip()
-    return text if text.lower().startswith(("http://", "https://")) and " " not in text else ""
 
 
 __all__ = ["SerphouseProvider", "parse_response"]

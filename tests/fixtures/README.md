@@ -12,14 +12,13 @@ Captured 2026-11-05/06. The no-AIO capture was made with SERPHouse's default `tb
 verified as no-AIO on a real phone; the other two were made with `tbs` cleared. Responses contain no API keys.
 To add one, save it with `python -m tracker probe "<query>" --save tests/fixtures/serphouse/<name>.json`.
 
-## `dataforseo/` — hand-written DataForSEO responses (google.com, India, English, mobile)
+## `dataforseo/` — real DataForSEO responses (google.com, India, English, `load_async_ai_overview`)
 
 | File | Query | What it shows |
 |---|---|---|
-| `aio_fde_salary_india_mobile.json` | forward deployed engineer salary in india | `ai_overview` item with 3 top-level `references[]` (Varsity at position 3, with a UTM) and an element whose nested references add one more (palantir.com); Varsity organic at `rank_group` 2 |
-| `no_aio_best_fde_course_india.json` | best forward deployed engineer course in india | Organic items only, no `ai_overview` |
-| `task_error.json` | x | Envelope OK, task `status_code` 40501 |
+| `aio_fde_salary_india_desktop.json` | forward deployed engineer salary in india | Desktop. Full AI Overview: 3 `references[]` in the sources list, plus 3 more sources cited only inline (`items[].references[]`). Organic `url`s are `google.com/goto` redirects; the site is in `breadcrumb` |
+| `aio_fde_salary_india_mobile.json` | forward deployed engineer salary in india | Mobile, same query. 6 references, 4 of them `google.com/goto` links with `domain: google.com` but a usable `source` and `title` |
+| `no_tasks_ok_envelope.json` | forward deployed engineer salary in india | Envelope `status_code` 20000 "Ok." but `tasks: []` and cost 0 |
 
-These follow the shape in DataForSEO's v3 `serp/google/organic/live/advanced` docs; no DataForSEO
-call has been made yet. Replace them with real captures on the first live run:
+Captured 2026-11-09. Responses contain no credentials. To add one:
 `python -m tracker probe --provider dataforseo "<query>" --save tests/fixtures/dataforseo/<name>.json`.
