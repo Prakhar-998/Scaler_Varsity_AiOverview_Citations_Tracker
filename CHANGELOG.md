@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- Checks record the prompt set they ran on (`prompt set` column, last): `set-<hash>` for the
+  active set, `file:<name>` for `check --prompts`.
+- Dashboard: a **By blog** section (cited Varsity pages with the prompts citing each and their best
+  position, plus mapped blogs never cited) and an "other runs" note listing excluded runs.
+- Intent groups in selection: gen ai/genai/generative ai, best/top, course/courses and
+  fees/fee/cost/price are treated as the same and word order is ignored; at most
+  `max_per_intent_group` (2) prompts per group are kept, in the GSC source and in select's dedupe.
+
 - `report` command: a self-contained static dashboard at `dashboard/index.html`. It has headline
   KPIs, per-cluster rates, gaps (sorted by intent and impressions, mapped to a Varsity blog),
   wins, top competing domains, a sortable and filterable all-prompts table, and a per-date trend.
@@ -68,6 +76,11 @@
 - Offline test suite.
 
 ### Changed
+- Dashboard numbers (except spend) use only checks of the active prompt set; test runs and earlier
+  prompt sets no longer count.
+- Dashboard trend has one point per check run instead of per date.
+- Organic rank shows "not in top 10" instead of a blank, with a footnote that the desktop match is
+  domain-level.
 - `SERP_PROVIDER` is now optional. When set, it overrides the per-command defaults for every
   command, with a warning. It is commented out in `.env.example`.
 - The hand-written DataForSEO fixtures were replaced with real mobile and desktop captures.

@@ -279,7 +279,45 @@ the log are listed with their logged estimate and shown as "estimated" on the da
 gitignored. `report --sample` builds a fake dataset (`.example` competitor domains) through the
 same builder, for portfolio screenshots.
 
-**Known limit:** test runs (`check --prompts data/private/test_prompts.csv`) land in `runs/` like
-real ones, so they are mixed into the headline rates and the trend. If that matters, keep test
-runs in a separate `--runs` folder, or delete their `runs/dry-run-*` directories before
-`report`.
+**Known limit (fixed 2026-11-10, see below):** test runs landed in `runs/` like real ones and
+were mixed into the headline rates and the trend.
+
+## Dashboard counts only the active prompt set; intent groups in selection (2026-11-10)
+
+**Prompt-set id on every check.** `check` tags each row with the set it ran on: `set-<8 hex>` (a
+hash of the sorted, lowercased active prompts) or `file:<name>` for `check --prompts`. The
+dashboard computes the id of `runs/active_prompts.json` and counts only matching checks in the
+KPIs, clusters, gaps, wins, by-blog, domains, table and trend. Everything else is listed in an
+"other runs" note, so a test run or an old prompt set can't move the citation rate.
+- **Why a hash, not the select run stamp:** it needs no new file or format change, and it can be
+  recomputed from any prompt list, which is how untagged checks from before this change are
+  handled: an untagged run counts as the active set only if it checked exactly the active
+  prompts. On 2026-11-10 that keeps the 50-check daily run and excludes the three 5-prompt test
+  runs. A run cut short by the SERP budget would also be excluded; acceptable for old data.
+- **Why `file:` for prompt files:** a test file could hold the same prompts as the active set;
+  check --prompts is a test by definition, so it never counts.
+- **Spend is the exception:** the cost KPI still covers every run, because that money was spent.
+
+**Trend per check run, not per date.** Checks run twice a day at different times, and the two runs
+are the point of the comparison. A run is one check timestamp (all devices).
+
+**By blog.** Cited Varsity pages are grouped by normalised URL (UTMs, `www`, trailing slash
+ignored), with each prompt's best position. "Mapped blogs never cited" uses the same blog mapping
+as the gaps, so it shows which existing posts have tracked demand but no citations yet.
+
+**Organic rank: "not in top 10".** A blank read as missing data. A successful check with no
+Varsity result means none on page one (DataForSEO's default depth), so it says so; failed or
+unchecked rows stay blank. The footnote says the desktop match is domain-level: organic links come
+back as opaque `google.com` redirects, so any interviewbit.com result counts, and it may not be
+the mapped blog.
+
+**Intent groups for selection.** The 2026-11-10 active set spent 9 of 50 slots on variants of the
+same search ("fde academy fees/cost/price", "fde.academy fees"; "best/top gen ai/genai/generative
+ai courses"). Fuzzy matching at 90 doesn't catch synonyms, and lowering the threshold would merge
+genuinely different searches. Instead a canonical key folds only the listed synonyms
+(gen ai/genai/generative ai, best/top, course/courses, fees/fee/cost/price), drops punctuation and
+sorts the words; at most 2 prompts per key are kept, highest impressions (GSC) or score (select)
+first. Two, not one, because the wording variants can show different AI Overviews and that's worth
+seeing. Fuzzy matching still applies across groups. It runs in the GSC source and in select's
+dedupe before probing, so dropped variants never cost a probe. It takes effect at the next
+`select`; the current active set is unchanged.
