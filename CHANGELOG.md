@@ -76,6 +76,9 @@
 - Offline test suite.
 
 ### Changed
+- `select --prompts <csv> --no-probe` keeps every prompt from the file (reason "curated, not
+  probed") instead of dropping those with no GSC match; dedupe and intent grouping still apply.
+- `select` logs each probe as `probe n/total: <prompt>`.
 - Dashboard numbers (except spend) use only checks of the active prompt set; test runs and earlier
   prompt sets no longer count.
 - Dashboard trend has one point per check run instead of per date.
@@ -99,6 +102,8 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- SERPHouse requests time out after 30s per attempt (was 60s) and each failed attempt is logged,
+  so a bad network no longer hangs `select` silently.
 - DataForSEO organic results: `url` is a `google.com/goto` redirect on both devices, so the site now
   comes from `breadcrumb` (the `domain` field is always google.com).
 - Opaque `google.com/goto` AI Overview references are no longer reported as a "google.com"

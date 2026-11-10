@@ -110,6 +110,13 @@ are only partly matched for now (see "Mobile references" in `docs/decisions.md`)
 saved `candidates.csv` or a hand-made list. These candidates still go through dedupe, the probe
 filter and scoring, and the flag combines with any `--source`.
 
+With `--no-probe`, the file is treated as a curated list: every prompt is kept as-is (reason
+"curated, not probed"), even without a GSC match. They still go through dedupe and intent
+grouping, and they take their `keep_top` slots first.
+
+Each probe logs `probe 12/37: <prompt>`. SERPHouse requests time out after 30s per attempt (up to
+3 attempts) and every failed attempt is logged, so a bad network can't hang `select` silently.
+
 Drafted LLM candidates are written to `runs/<run>/candidates.csv` per blog as they are drafted,
 before any probe SERP call. If a run stops, re-use them without drafting again:
 `select --source gsc --prompts runs/<run>/candidates.csv ...` gives the same result as `both`.

@@ -321,3 +321,15 @@ first. Two, not one, because the wording variants can show different AI Overview
 seeing. Fuzzy matching still applies across groups. It runs in the GSC source and in select's
 dedupe before probing, so dropped variants never cost a probe. It takes effect at the next
 `select`; the current active set is unchanged.
+
+## Curated prompt files with --no-probe (2026-11-10)
+
+`select --prompts <csv> --no-probe` used to drop every prompt with no GSC match ("no GSC match;
+probing disabled"), so a hand-picked list mostly vanished. Without a probe there is no evidence to
+filter on, and the person who wrote the list is the evidence, so the file is now kept as-is with
+reason "curated, not probed". Dedupe and intent grouping still apply, because duplicates waste
+check credits whoever picked them. Curated prompts take their `keep_top` slots first, then GSC or
+probed candidates fill the rest by score. With probing on, file prompts are filtered as before.
+
+**SERPHouse timeout:** 30s per attempt, up to 3 attempts, each failure logged. The worst case per
+probe is about 1.5 minutes with a warning every 30s, not minutes of silence.
