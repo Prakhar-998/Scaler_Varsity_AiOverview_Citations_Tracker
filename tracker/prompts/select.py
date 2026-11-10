@@ -15,6 +15,7 @@ from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, BudgetExceeded
 from tracker.config import Cluster, GscQuery
 
 from .generate import Candidate
+from .groups import IntentGroups
 
 W_INTENT, W_DEMAND, W_AIO, W_PROGRAM = 0.35, 0.30, 0.25, 0.10
 MIN_WORDS, MAX_WORDS = 3, 12
@@ -86,6 +87,7 @@ def select_prompts(
     """Return a Decision for every candidate, in the order: kept (by score), then dropped."""
     gsc_threshold = float(settings.get("gsc_match_threshold", 85))
     dedupe_threshold = float(settings.get("dedupe_threshold", 90))
+    max_per_group = int(settings.get("max_per_intent_group", 2))
     keep_top = int(settings.get("keep_top", 50))
     probe = bool(settings.get("probe_unmatched", True)) and provider is not None
 
@@ -126,13 +128,18 @@ def select_prompts(
 
     # 3. dedupe before probing so we never pay for near-duplicates
     pending.sort(key=lambda d: score(d, max_imp, weights.get(d.candidate.cluster, 0), max_weight), reverse=True)
+    # (intent groups: at most max_per_group per group, plus fuzzy matches across groups; see groups.py)
     unique: List[Decision] = []
+    groups = IntentGroups(max_per_group, dedupe_threshold)
+    by_prompt: Dict[str, Decision] = {}
     for d in pending:
-        dup = next((u for u in unique if fuzz.token_sort_ratio(d.prompt, u.prompt) >= dedupe_threshold), None)
+        dup, reason = groups.check(d.prompt)
         if dup is not None:
-            d.reason = f"near-duplicate of '{dup.prompt}'"
-            _note_overlap(dup, d)
+            d.reason = reason
+            _note_overlap(by_prompt[dup], d)
         else:
+            groups.add(d.prompt)
+            by_prompt[d.prompt] = d
             unique.append(d)
 
     # 4. probe candidates with no GSC match

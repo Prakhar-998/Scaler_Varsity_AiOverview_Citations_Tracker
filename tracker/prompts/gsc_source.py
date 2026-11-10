@@ -5,11 +5,10 @@ import logging
 import re
 from typing import List
 
-from rapidfuzz import fuzz
-
 from tracker.config import BrandRules, Cluster, GscQuery
 
 from .generate import Candidate, classify_intent
+from .groups import IntentGroups
 
 log = logging.getLogger(__name__)
 
@@ -49,11 +48,12 @@ def tag_brands(candidates: List[Candidate], rules: BrandRules) -> None:
 
 
 def gsc_candidates(gsc: List[GscQuery], clusters: List[Cluster], rules: BrandRules,
-                   dedupe_threshold: float = 90) -> List[Candidate]:
+                   dedupe_threshold: float = 90, max_per_group: int = 2) -> List[Candidate]:
     """Queries in an active cluster that carry a BOFU term, ranked by impressions.
 
     Navigational own-brand and near-duplicate queries are returned with `pre_drop` set so they are logged as
-    dropped with a reason. Queries outside a cluster or without a BOFU term are not candidates.
+    dropped with a reason. Near-duplicates: at most `max_per_group` queries per intent group (see groups.py),
+    and fuzzy matches across groups. Queries outside a cluster or without a BOFU term are not candidates.
     """
     active = {c.key for c in clusters}
     pool = [g for g in gsc if g.cluster in active and bofu_term(g.query)]
@@ -65,13 +65,15 @@ def gsc_candidates(gsc: List[GscQuery], clusters: List[Cluster], rules: BrandRul
     tag_brands(out, rules)
 
     kept: List[Candidate] = []
-    for c in out:  # highest impressions first, so the stronger query survives
+    groups = IntentGroups(max_per_group, dedupe_threshold)
+    for c in out:  # highest impressions first, so the stronger queries survive
         if c.pre_drop:
             continue
-        dup = next((k for k in kept if fuzz.token_sort_ratio(c.prompt, k.prompt) >= dedupe_threshold), None)
+        dup, reason = groups.check(c.prompt)
         if dup is not None:
-            c.pre_drop = f"near-duplicate of higher-impression GSC query '{dup.prompt}'"
+            c.pre_drop = reason.replace("near-duplicate of", "near-duplicate of higher-impression GSC query")
         else:
+            groups.add(c.prompt)
             kept.append(c)
     log.info("GSC source: %d of %d queries in active clusters with a BOFU term; %d kept after brand "
              "filter and dedupe (%d competitor, %d brand_comparison)", len(pool), len(gsc), len(kept),

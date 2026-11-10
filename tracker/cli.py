@@ -132,7 +132,8 @@ def cmd_select(args, settings) -> int:
     # GSC first, so when both sources produce the same search the GSC version is the one kept
     candidates = []
     if args.source in ("gsc", "both"):
-        candidates += gsc_candidates(gsc, clusters, rules, float(settings.get("dedupe_threshold", 90)))
+        candidates += gsc_candidates(gsc, clusters, rules, float(settings.get("dedupe_threshold", 90)),
+                                     int(settings.get("max_per_intent_group", 2)))
     if args.prompts:
         # a saved candidates.csv or a manual list: no drafting, but the same dedupe, probe filter and scoring
         loaded = load_prompt_file(Path(args.prompts), clusters)

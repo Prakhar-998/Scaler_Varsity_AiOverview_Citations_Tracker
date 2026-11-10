@@ -94,11 +94,12 @@ def test_incomplete_probe_counts_as_aio_shown():
 def test_near_duplicates_dropped_before_probing():
     provider = FakeProvider()
     cands = [cand("best genai course in india"), cand("best genai courses in india"),
+             cand("top generative ai course in india"), cand("best genai course india"),
              cand("best genai course in india")]
     ds = select_prompts(cands, [], CLUSTERS, provider, SETTINGS)
     reasons = sorted(d.reason.split(" ")[0] for d in ds)
-    assert "exact" in reasons and "near-duplicate" in reasons
-    assert len(provider.calls) == 1
+    assert "exact" in reasons and "near-duplicate" in reasons and "intent" in reasons
+    assert len(provider.calls) == 2  # two per intent group are probed; the rest never cost a SERP call
 
 
 def test_length_filter():

@@ -18,6 +18,8 @@ candidates_per_blog: 4
 keep_top: 50
 gsc_match_threshold: 85   # rapidfuzz token_sort_ratio to count as a GSC match
 dedupe_threshold: 90      # candidates at or above this similarity are near-duplicates
+max_per_intent_group: 2   # most prompts kept per intent group (gen ai/genai/generative ai, best/top,
+                          # course/courses, fees/fee/cost/price folded; word order ignored)
 probe_unmatched: true     # spend one SERP call on candidates with no GSC match
 
 # LLM drafting: options are tried in order. Per call: timeout, then up to max_retries retries on
