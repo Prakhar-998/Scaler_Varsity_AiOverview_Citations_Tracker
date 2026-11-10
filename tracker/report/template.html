@@ -551,11 +551,14 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     }
     var width = Math.max(host.clientWidth, 280), height = 220, padL = 44, padR = 24, padT = 16, padB = 28;
     var plotW = width - padL - padR, plotH = height - padT - padB;
-    var maxV = Math.max(25, Math.ceil(Math.max.apply(null, pts.map(function (p) { return p.citation_rate; })) / 25) * 25);
+    // round ticks: the smallest of 5/10/20/25 that needs at most 5 steps
+    var top = Math.max(5, Math.max.apply(null, pts.map(function (p) { return p.citation_rate; })));
+    var stepV = [5, 10, 20, 25].filter(function (st) { return Math.ceil(top / st) <= 5; })[0] || 25;
+    var maxV = Math.min(100, Math.ceil(top / stepV) * stepV);
     var x = function (i) { return padL + (pts.length === 1 ? plotW / 2 : (i / (pts.length - 1)) * plotW); };
     var y = function (v) { return padT + plotH - (v / maxV) * plotH; };
     var s = svg("svg", { width: width, height: height, role: "img", "aria-label": "Varsity citation rate per run date" });
-    for (var t = 0; t <= maxV; t += maxV / 4) {
+    for (var t = 0; t <= maxV; t += stepV) {
       s.appendChild(svg("line", { x1: padL, x2: width - padR, y1: y(t), y2: y(t),
         stroke: t === 0 ? "var(--baseline)" : "var(--grid)", "stroke-width": 1 }));
       var tl = svg("text", { x: padL - 8, y: y(t) + 4, "text-anchor": "end", class: "axis-label" });
