@@ -134,6 +134,22 @@ def test_active_prompts_json_defines_the_current_set():
     assert r["kpis"]["prompts_tracked"] == 1 and r["kpis"]["checks"] == 0 and len(r["other_runs"]) == 1
 
 
+def test_by_blog_lists_cited_pages_and_mapped_blogs_never_cited():
+    fees = "https://www.interviewbit.com/varsity/blog/fde-fees/?utm_source=x"
+    r = report([check("fde course fees", cited="yes", url=fees, pos="4"),
+                check("fde course fees", time="18:00", cited="yes", url=V, pos="2"),
+                check("fde fees india", cited="yes", url=V, pos="5"),
+                check("best fde course"), check("genai roadmap 2026", cluster="genai")])
+    cited = r["by_blog"]["cited"]
+    assert len(cited) == 1  # UTM and trailing-slash variants are one page
+    assert cited[0]["best_position"] == 2 and cited[0]["checks"] == 3
+    assert cited[0]["prompts"] == [{"prompt": "fde course fees", "position": 2},
+                                   {"prompt": "fde fees india", "position": 5}]
+    never = {b["title"]: b["prompts"] for b in r["by_blog"]["never_cited"]}
+    assert never == {"Best FDE Training Programs in India": ["best fde course", "fde course fees", "fde fees india"],
+                     "GenAI Roadmap": ["genai roadmap 2026"]}
+
+
 def _write(path, headers, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="") as f:

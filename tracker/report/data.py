@@ -25,6 +25,7 @@ from typing import Dict, List, Optional
 from rapidfuzz import fuzz
 
 from tracker.config import Blog, Cluster
+from tracker.match import normalise_url
 from tracker.prompts.generate import INTENT_PATTERNS, OTHER_INTENT_WEIGHT, classify_intent
 from tracker.prompts.prompt_file import prompt_set_id
 
@@ -158,6 +159,40 @@ def _map_blog(prompt: str, cluster: str, named: str, blogs: List[Blog]) -> Dict[
     return {"title": "", "url": "", "how": "no matching blog"}
 
 
+def _by_blog(checks: List[Dict[str, str]], prompts: Dict[str, str], named: Dict[str, str],
+             blogs: List[Blog]) -> Dict[str, List[Dict]]:
+    """Varsity pages cited in any check, with the prompts citing each and its best position; and the blogs
+    that active prompts map to (see _map_blog) but that were never cited. `prompts` is prompt -> cluster."""
+    titles = {normalise_url(b.url): b.title for b in blogs}
+    cited: Dict[str, Dict] = {}
+    for r in checks:
+        if r.get("check status") != "ok" or r.get("varsity cited") != "yes" or not r.get("cited url"):
+            continue
+        key = normalise_url(r["cited url"])
+        e = cited.setdefault(key, {"url": r["cited url"], "title": titles.get(key, ""), "checks": 0, "best": {}})
+        e["checks"] += 1
+        pos, best = _int(r.get("position")), e["best"]
+        if r["prompt"] not in best or (pos is not None and (best[r["prompt"]] is None or pos < best[r["prompt"]])):
+            best[r["prompt"]] = pos
+    rows = []
+    for e in cited.values():
+        hits = sorted(e.pop("best").items(), key=lambda kv: (kv[1] or 99, kv[0]))
+        e["prompts"] = [{"prompt": p, "position": pos} for p, pos in hits]
+        e["best_position"] = min((pos for _, pos in hits if pos is not None), default=None)
+        rows.append(e)
+    rows.sort(key=lambda e: (-len(e["prompts"]), e["best_position"] or 99, e["url"]))
+
+    never: Dict[str, Dict] = {}
+    for p, cluster in sorted(prompts.items()):
+        blog = _map_blog(p, cluster, named.get(p, ""), blogs)
+        if not blog["title"] or (blog["url"] and normalise_url(blog["url"]) in cited):
+            continue
+        e = never.setdefault(blog["url"] or blog["title"], dict(blog, prompts=[]))
+        e["prompts"].append(p)
+    uncited = sorted(never.values(), key=lambda e: (-len(e["prompts"]), e["title"]))
+    return {"cited": rows, "never_cited": uncited}
+
+
 def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                  generated_at: Optional[datetime] = None, sample: bool = False) -> Dict:
     names = {c.key: c.name for c in clusters}
@@ -254,7 +289,13 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
         by_run[_checked_at(r)].append(r)
     trend = [dict(_rates(rows), run=at) for at, rows in sorted(by_run.items()) if at]
 
-    return {"title": "Varsity AI Overview Citation Tracker", "sample": sample,
+    # 8. by blog
+    tracked = {r["prompt"]: r.get("cluster", "") for r in latest}
+    for p in active:
+        tracked.setdefault(p, meta.get(p, {}).get("cluster", ""))
+    by_blog = _by_blog(checks, tracked, {p: info(p)["blog"] for p in tracked}, blogs)
+
+    return {"title": "Varsity AI Overview Citation Tracker", "sample": sample, "by_blog": by_blog,
             "generated_at": (generated_at or datetime.now()).strftime("%Y-%m-%d %H:%M"),
             "prompts_from": inputs.prompts_from, "kpis": kpis, "clusters": cluster_rows, "gaps": gaps,
             "wins": wins, "domains": domains, "aio_with_sources": len(with_sources), "prompts": table,

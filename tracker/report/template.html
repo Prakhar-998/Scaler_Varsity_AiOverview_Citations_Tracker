@@ -127,6 +127,10 @@ a:hover { text-decoration: underline; }
 .filters label { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 footer p { margin: 0 0 6px; }
+.sub-head { font-size: 14px; margin: 20px 0 2px; }
+.sub-note { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
+.plist { margin: 0; padding: 0; list-style: none; }
+.plist li { margin: 1px 0; }
 .other-runs { margin-top: 12px; color: var(--ink-2); font-size: 13px; }
 .other-runs summary { cursor: pointer; }
 .other-runs ul { margin: 6px 0 0; padding-left: 20px; }
@@ -165,6 +169,17 @@ footer p { margin: 0 0 6px; }
     <div class="sec-head"><div><h2 id="h-wins">Wins: Varsity cited</h2>
       <p>Latest check per prompt and device.</p></div><span class="count" id="wins-count"></span></div>
     <div id="wins"></div>
+  </section>
+
+  <section aria-labelledby="h-blogs">
+    <div class="sec-head"><div><h2 id="h-blogs">By blog</h2>
+      <p>Varsity pages cited in any check of the active set, the prompts citing each and its best position.</p></div>
+      <span class="count" id="blogs-count"></span></div>
+    <div id="blogs-cited"></div>
+    <h3 class="sub-head">Mapped blogs never cited</h3>
+    <p class="sub-note">Blogs that tracked prompts map to (the blog a prompt was drafted from, or the closest title or
+      keyword in its cluster) with no citation in any check yet.</p>
+    <div id="blogs-never"></div>
   </section>
 
   <section aria-labelledby="h-domains">
@@ -447,6 +462,38 @@ footer p { margin: 0 0 6px; }
     { label: "Device", render: function (r) { return dash(r.device); } },
     { label: "Checked", render: function (r) { return r.checked_at; } }
   ], D.wins));
+
+  // ---------- by blog ----------
+  var BB = D.by_blog || { cited: [], never_cited: [] };
+  document.getElementById("blogs-count").textContent = BB.cited.length + " cited · " + BB.never_cited.length + " never cited";
+  function blogCell(r) {
+    var span = el("span"); span.appendChild(link(r.url, r.title || shortUrl(r.url)));
+    if (r.title && r.url) span.appendChild(el("div", { class: "muted" }, shortUrl(r.url)));
+    return span;
+  }
+  function promptList(items) {
+    var ul = el("ul", { class: "plist" });
+    items.forEach(function (x) { ul.appendChild(el("li", null, x)); });
+    return ul;
+  }
+  var citedHost = document.getElementById("blogs-cited");
+  if (!BB.cited.length) citedHost.appendChild(empty("No Varsity page cited yet."));
+  else citedHost.appendChild(table([
+    { label: "Varsity page", cls: "prompt", render: blogCell },
+    { label: "Prompts citing it", render: function (r) { return promptList(r.prompts.map(function (p) {
+        return p.prompt + (p.position ? " (#" + p.position + ")" : ""); })); } },
+    { label: "Best position", num: true, render: function (r) { return r.best_position ? "#" + r.best_position : "–"; } },
+    { label: "Checks citing", num: true, render: function (r) { return String(r.checks); } }
+  ], BB.cited));
+  var neverHost = document.getElementById("blogs-never");
+  if (!BB.never_cited.length) neverHost.appendChild(empty(D.prompts.length ? "Every mapped blog is cited at least once, or no blogs file was found."
+                                                                            : "No prompts tracked yet."));
+  else neverHost.appendChild(table([
+    { label: "Varsity blog", cls: "prompt", render: blogCell },
+    { label: "Tracked prompts mapped to it", render: function (r) { return promptList(r.prompts); } },
+    { label: "Prompts", num: true, render: function (r) { return String(r.prompts.length); } },
+    { label: "Mapped by", render: function (r) { return r.how; } }
+  ], BB.never_cited));
 
   // ---------- 5. domains ----------
   document.getElementById("domains-note").textContent = D.aio_with_sources
