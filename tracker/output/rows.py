@@ -13,7 +13,7 @@ PROMPT_HEADERS = ["prompt", "cluster", "source", "brand tag", "intent", "score",
                   "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "device", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
-                 "error"]
+                 "error", "prompt set"]
 SUMMARY_HEADERS = ["cluster", "device", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
                    "varsity citation rate %", "incomplete rate %", "brand citation rate %"]
 
@@ -29,7 +29,7 @@ def _yn(v: bool) -> str:
 
 
 def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: Optional[CitationMatch],
-              device: str = "") -> List:
+              device: str = "", prompt_set: str = "") -> List:
     m = m or CitationMatch()
     cited_known = result.status == STATUS_OK  # incomplete: AIO shown but sources unknown
     error = result.error or ("AI Overview sources did not load" if result.status == STATUS_INCOMPLETE else "")
@@ -39,7 +39,7 @@ def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: 
         _yn(m.varsity_cited) if cited_known else "",
         m.cited_url, m.position or "", _yn(m.brand_cited) if cited_known else "",
         m.organic_rank or "", m.rank_match, ", ".join(m.competing_domains[:10]),
-        result.status, error,
+        result.status, error, prompt_set,
     ]
 
 

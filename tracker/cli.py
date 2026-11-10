@@ -28,7 +28,7 @@ from tracker.match import match_citations
 from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
 from tracker.llm import build_chain
 from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, load_prompt_file,
-                             select_prompts, tag_brands)
+                             prompt_file_set_id, prompt_set_id, select_prompts, tag_brands)
 
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
@@ -210,7 +210,7 @@ def record_cost(command: str, providers: list, checks: int, calls: int, estimate
         log.info("billed: $%s on %s", billed, providers[0].name)
 
 
-def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None):
+def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None, prompt_set: str = ""):
     """One check per prompt on the provider's device. Stops with a warning if the budget runs out."""
     rows = []
     device = provider.device
@@ -225,7 +225,8 @@ def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[
                 json.dumps({"query": p["prompt"], "device": device, "body": result.raw}, indent=2))
         # organic rank is independent of the AI Overview, so match every non-failed check
         m = match_citations(result) if result.status != STATUS_FAILED else None
-        rows.append(check_row(when, p["prompt"], p["cluster"], result, m, device=device))
+        rows.append(check_row(when, p["prompt"], p["cluster"], result, m, device=device,
+                              prompt_set=prompt_set))
     return rows
 
 
@@ -234,11 +235,14 @@ def cmd_check(args, settings) -> int:
         # read-only: checking a prompt file never touches active_prompts.json
         prompts = [{"prompt": c.prompt, "cluster": c.cluster, "source": c.source}
                    for c in load_prompt_file(Path(args.prompts), load_clusters())]
+        prompt_set = prompt_file_set_id(Path(args.prompts))
     elif not ACTIVE_PROMPTS.exists():
         log.error("no %s; run `select` first, or pass --prompts", ACTIVE_PROMPTS)
         return 1
     else:
         prompts = json.loads(ACTIVE_PROMPTS.read_text())
+        prompt_set = prompt_set_id(p["prompt"] for p in prompts)
+    log.info("prompt set: %s (%d prompts)", prompt_set, len(prompts))
     devices = resolve_devices(args, settings)
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     planned = len(prompts) * len(devices)
@@ -262,7 +266,7 @@ def cmd_check(args, settings) -> int:
         if budget.remaining <= 0:
             log.warning("SERP budget used up; skipping %s", provider.device)
             continue
-        rows += run_checks(prompts, provider, now, raw_dir)
+        rows += run_checks(prompts, provider, now, raw_dir, prompt_set)
     writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))

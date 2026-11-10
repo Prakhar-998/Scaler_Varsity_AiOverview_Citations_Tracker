@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import logging
 from pathlib import Path
 from typing import Iterable, List
@@ -38,6 +39,17 @@ class CandidateLog:
         self.count += len(rows)
 
 
+def prompt_set_id(prompts: Iterable[str]) -> str:
+    """Stable id for a set of prompts, ignoring order and case: the same active set always gets the same id."""
+    digest = hashlib.sha1("\n".join(sorted({p.strip().lower() for p in prompts})).encode()).hexdigest()
+    return f"set-{digest[:8]}"
+
+
+def prompt_file_set_id(path: Path) -> str:
+    """Checks of a prompt file (check --prompts) are tagged by file name, so they never pass as the active set."""
+    return f"file:{Path(path).name}"
+
+
 def load_prompt_file(path: Path, clusters: List[Cluster]) -> List[Candidate]:
     """Read a prompt file. Rows with no prompt, or a cluster that isn't active, are skipped with a warning."""
     keys = {c.key for c in clusters}
@@ -66,4 +78,4 @@ def load_prompt_file(path: Path, clusters: List[Cluster]) -> List[Candidate]:
     return out
 
 
-__all__ = ["CANDIDATE_HEADERS", "CandidateLog", "load_prompt_file"]
+__all__ = ["CANDIDATE_HEADERS", "CandidateLog", "load_prompt_file", "prompt_file_set_id", "prompt_set_id"]

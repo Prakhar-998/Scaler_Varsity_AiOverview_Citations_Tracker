@@ -2,6 +2,7 @@ import pytest
 import csv
 import json
 from datetime import datetime
+from pathlib import Path
 
 from tracker import cli
 from tracker.checks.base import (CallBudget, OrganicResult, Reference, SerpResult, STATUS_INCOMPLETE,
@@ -31,6 +32,9 @@ def test_check_dry_run_end_to_end(tmp_path, monkeypatch):
     assert cli.main(["--provider", "fake", "check", "--dry-run"]) == 0
     out = next(tmp_path.glob("dry-run-*"))
     assert (out / "checks.csv").exists() and (out / "summary.csv").exists()
+    from tracker.prompts import prompt_set_id
+    row = next(csv.DictReader(open(out / "checks.csv")))
+    assert row["prompt set"] == prompt_set_id(["a"])  # tagged with the active set's id
 
 
 def test_check_without_select_fails(tmp_path, monkeypatch):
@@ -360,6 +364,7 @@ def test_check_prompt_file_leaves_active_prompts_untouched(tmp_path, monkeypatch
     checks = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "checks.csv")))
     assert [r["prompt"] for r in checks] == ["what is a forward deployed engineer", "best generative ai course in india"]
     assert (tmp_path / "active.json").read_text() == real
+    assert {r["prompt set"] for r in checks} == {"file:" + Path(path).name}  # never passes as the active set
 
 
 def test_check_aborts_before_any_call_when_over_max_cost(tmp_path, monkeypatch, caplog):
