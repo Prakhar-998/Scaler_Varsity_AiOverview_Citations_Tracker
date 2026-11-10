@@ -298,6 +298,14 @@ def cmd_report(args, settings) -> int:
     from tracker.report import build_report, load_runs, render
 
     clusters = load_clusters(active_only=False)
+    if args.sample:
+        from tracker.report.sample import sample_inputs
+
+        inputs, blogs = sample_inputs()
+        out = render(build_report(inputs, clusters, blogs, sample=True),
+                     Path(args.out) if args.out else DASHBOARD / "sample.html")
+        log.info("sample dashboard (fake data): %s", out)
+        return 0
     blogs_path = Path(args.blogs) if args.blogs else DEFAULT_BLOGS
     blogs = load_blogs(blogs_path, clusters) if blogs_path.exists() else []
     if not blogs:
@@ -345,7 +353,8 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--save", help="write the raw response JSON to this path")
 
     rp = sub.add_parser("report", help="build the static dashboard from runs/")
-    rp.add_argument("--out", help="output HTML (default: dashboard/index.html)")
+    rp.add_argument("--out", help="output HTML (default: dashboard/index.html, or dashboard/sample.html)")
+    rp.add_argument("--sample", action="store_true", help="render fake data, for screenshots; reads nothing")
     rp.add_argument("--runs", help="folder with select/check outputs (default: runs/)")
     rp.add_argument("--blogs", help="blogs CSV for mapping gaps to a Varsity blog (default: data/private/blogs.csv)")
 

@@ -157,3 +157,19 @@ def test_report_command_writes_the_dashboard(tmp_path, monkeypatch):
     assert cli.main(["report", "--runs", str(tmp_path / "runs"), "--out", str(out),
                      "--blogs", str(tmp_path / "missing.csv")]) == 0
     assert "Varsity AI Overview Citation Tracker" in out.read_text()
+
+
+def test_sample_mode_uses_only_fake_data(tmp_path, monkeypatch):
+    import json
+    import re
+
+    from tracker import cli
+
+    monkeypatch.setattr(cli, "RUNS", tmp_path / "must-not-be-read")
+    out = tmp_path / "sample.html"
+    assert cli.main(["report", "--sample", "--out", str(out)]) == 0
+    html = out.read_text()
+    data = json.loads(re.search(r'type="application/json">(.*?)</script>', html, re.S).group(1).replace("<\\/", "</"))
+    assert data["sample"] is True and len(data["trend"]) >= 2 and data["gaps"] and data["wins"]
+    domains = {d for p in data["prompts"] for d in p["competitors"]}
+    assert domains and all(d.endswith(".example") for d in domains)  # never a real competitor
