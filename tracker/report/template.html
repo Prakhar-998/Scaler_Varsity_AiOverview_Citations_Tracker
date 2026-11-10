@@ -126,6 +126,11 @@ a:hover { text-decoration: underline; }
 .filters input { flex: 1 1 200px; min-width: 160px; }
 .filters label { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+footer p { margin: 0 0 6px; }
+.other-runs { margin-top: 12px; color: var(--ink-2); font-size: 13px; }
+.other-runs summary { cursor: pointer; }
+.other-runs ul { margin: 6px 0 0; padding-left: 20px; }
+.other-runs li { margin: 2px 0; }
 @media (max-width: 640px) { .kpi .value { font-size: 24px; } h1 { font-size: 19px; } }
 </style>
 </head>
@@ -140,10 +145,11 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   </header>
 
   <div class="kpis" id="kpis" aria-label="Headline numbers"></div>
+  <details class="other-runs" id="other-runs" hidden></details>
 
   <section aria-labelledby="h-cluster">
     <div class="sec-head"><div><h2 id="h-cluster">By cluster</h2>
-      <p>AI Overview presence and Varsity citation rate (of AI Overviews with sources), all checks.</p></div></div>
+      <p>AI Overview presence and Varsity citation rate (of AI Overviews with sources), all checks of the active set.</p></div></div>
     <div class="legend" id="cluster-legend"></div>
     <div class="chart" id="cluster-chart"></div>
   </section>
@@ -270,7 +276,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     (D.prompts_from ? " · prompts from " + D.prompts_from : "");
   var k = D.kpis;
   var kpis = [
-    ["Prompts tracked", dash(k.prompts_tracked), "active in the latest select"],
+    ["Prompts tracked", dash(k.prompts_tracked), "active set" + (k.prompt_set ? " " + k.prompt_set : "")],
     ["Checks run", dash(k.checks), k.ok + " ok · " + k.incomplete + " incomplete · " + k.no_aio + " no AIO · " + k.failed + " failed"],
     ["AI Overview presence", pct(k.aio_presence), "of successful checks"],
     ["Varsity citation rate", pct(k.citation_rate), k.cited + " of " + k.ok + " AIOs with sources"],
@@ -278,7 +284,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     ["Last check", k.last_check_at || "–", "local time", true],
     ["DataForSEO cost so far", k.cost_usd == null ? "–" : "$" + k.cost_usd.toFixed(3),
       k.cost_usd == null ? "no runs in runs/cost_log.csv"
-        : "$" + k.cost_billed_usd.toFixed(3) + " billed" + (k.cost_runs_estimated
+        : "all runs · $" + k.cost_billed_usd.toFixed(3) + " billed" + (k.cost_runs_estimated
           ? " + $" + k.cost_estimated_usd.toFixed(3) + " est." : "")]
   ];
   var kbox = document.getElementById("kpis");
@@ -289,6 +295,20 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     c.appendChild(el("div", { class: "note" }, x[2]));
     kbox.appendChild(c);
   });
+
+  // other runs: checks left out of every number above except spend
+  var others = D.other_runs || [];
+  if (others.length) {
+    var box = document.getElementById("other-runs"), n = 0;
+    others.forEach(function (o) { n += o.checks; });
+    box.appendChild(el("summary", null, others.length + " other run" + (others.length > 1 ? "s" : "") + " (" + n +
+      " checks) not counted: test runs and earlier prompt sets. Only the active set's checks are shown."));
+    var ul = el("ul");
+    others.forEach(function (o) {
+      ul.appendChild(el("li", null, o.checked_at + " · " + o.checks + " checks of " + o.prompts + " prompts · " + o.why));
+    });
+    box.appendChild(ul); box.hidden = false;
+  }
 
   // ---------- horizontal bar chart (shared by cluster + domain charts) ----------
   // rows: [{label, values:[...], tip:[...]}], series: [{name, color}], max, fmt(v)

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from tracker.config import Blog, Cluster
 from tracker.output import CHECK_HEADERS, PROMPT_HEADERS
+from tracker.prompts import prompt_set_id
 from tracker.report.data import RunInputs, build_report, load_runs
 
 CLUSTERS = [Cluster("fde", "Forward Deployed Engineer", 1.0, True, ["fde"]),
@@ -14,12 +15,12 @@ V = "https://www.interviewbit.com/varsity/blog/fde-fees/"
 
 
 def check(prompt, cluster="fde", status="ok", cited="no", date="2026-11-10", time="09:00", device="desktop",
-          domains="", rank="", url="", pos=""):
+          domains="", rank="", url="", pos="", pset=""):
     row = dict.fromkeys(CHECK_HEADERS, "")
     row.update({"date": date, "time": time, "prompt": prompt, "cluster": cluster, "device": device,
                 "check status": status, "ai overview shown": "yes" if status in ("ok", "incomplete") else "no",
                 "varsity cited": cited if status == "ok" else "", "competing domains": domains,
-                "organic rank": rank, "cited url": url, "position": pos})
+                "organic rank": rank, "cited url": url, "position": pos, "prompt set": pset})
     return row
 
 
@@ -93,7 +94,8 @@ def test_competing_domains_share_of_aios_with_sources():
 
 
 def test_devices_are_separate_rows_and_unchecked_active_prompts_listed():
-    r = report([check("a", device="desktop"), check("a", device="mobile")],
+    current = prompt_set_id(["a", "never checked"])
+    r = report([check("a", device="desktop", pset=current), check("a", device="mobile", pset=current)],
                [prompt("a", tag="competitor"), prompt("never checked"), prompt("dropped one", status="dropped")])
     rows = {(p["prompt"], p["device"]): p for p in r["prompts"]}
     assert set(rows) == {("a", "desktop"), ("a", "mobile"), ("never checked", "")}
@@ -107,6 +109,27 @@ def test_trend_one_point_per_run_date_and_clusters_in_config_order():
                 check("c", date="2026-11-10", cluster="genai"), check("d", date="2026-11-10")])
     assert [(t["date"], t["citation_rate"]) for t in r["trend"]] == [("2026-11-09", 50.0), ("2026-11-10", 0.0)]
     assert [c["cluster"] for c in r["clusters"]] == ["fde", "genai"]
+
+
+def test_only_the_active_sets_checks_count():
+    prompts = [prompt("a"), prompt("b")]
+    current = prompt_set_id(["a", "b"])
+    r = report([check("a", time="08:00", cited="yes", pset=current), check("b", time="08:00", pset=current),
+                check("a", time="07:00", pset="file:test_prompts.csv"),        # check --prompts test run
+                check("a", time="06:00", pset="set-0ld0ld00"),                 # earlier prompt set
+                check("a", time="05:00"), check("b", time="05:00"),            # untagged, exactly the set
+                check("a", time="04:00")], prompts)                            # untagged, not the set
+    assert r["kpis"]["checks"] == 4 and r["kpis"]["checks_excluded"] == 3
+    assert r["kpis"]["prompt_set"] == current
+    assert [(o["checked_at"][-5:], o["why"]) for o in r["other_runs"]] == [
+        ("04:00", "untagged run that didn't check the active set"), ("06:00", "earlier prompt set"),
+        ("07:00", "check --prompts test_prompts.csv (test run)")]
+
+
+def test_active_prompts_json_defines_the_current_set():
+    inputs = RunInputs([prompt("a"), prompt("b")], "run", [check("a"), check("b")], [], active=["a"])
+    r = build_report(inputs, CLUSTERS, BLOGS)
+    assert r["kpis"]["prompts_tracked"] == 1 and r["kpis"]["checks"] == 0 and len(r["other_runs"]) == 1
 
 
 def _write(path, headers, rows):
