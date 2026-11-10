@@ -165,3 +165,25 @@ def test_draft_progress_log_and_all_llm_fail(caplog):
     assert [c.prompt for c in out] == ["best genai course in india"] and out[0].source == "llm"
     assert "drafting 1/3 via openrouter:m:free: GenAI 0 -> 1 candidates" in caplog.text
     assert "LLM drafting stopped at blog 2/3" in caplog.text
+
+
+def test_curated_prompts_kept_without_gsc_or_probe_but_still_grouped():
+    from dataclasses import replace
+
+    cands = [replace(cand(x), curated=True, source="manual") for x in (
+        "fde academy fees", "fde academy cost", "fde academy price",   # third in the group: dropped
+        "what is a forward deployed engineer")]                        # no GSC match: kept anyway
+    ds = {d.prompt: d for d in select_prompts(cands, [], CLUSTERS, None, SETTINGS)}
+    assert [p for p, d in ds.items() if d.status == ACTIVE] == ["fde academy fees", "fde academy cost",
+                                                                 "what is a forward deployed engineer"]
+    assert {d.reason for d in ds.values() if d.status == ACTIVE} == {"curated, not probed"}
+    assert ds["fde academy price"].reason.startswith("intent group full")
+
+
+def test_probe_progress_is_logged(caplog):
+    import logging
+
+    caplog.set_level(logging.INFO)
+    select_prompts([cand("best genai course in india"), cand("fde course fees online")], [], CLUSTERS,
+                   FakeProvider(), SETTINGS)
+    assert "probe 1/2: " in caplog.text and "probe 2/2: " in caplog.text

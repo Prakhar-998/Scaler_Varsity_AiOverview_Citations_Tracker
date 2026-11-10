@@ -138,6 +138,9 @@ def cmd_select(args, settings) -> int:
         # a saved candidates.csv or a manual list: no drafting, but the same dedupe, probe filter and scoring
         loaded = load_prompt_file(Path(args.prompts), clusters)
         tag_brands(loaded, rules)
+        if args.no_probe:  # curated list: keep every prompt as-is (still deduped and intent-grouped)
+            for c in loaded:
+                c.curated = True
         candidates += loaded
     if args.source in ("llm", "both"):
         blogs = [b for b in load_blogs(Path(args.blogs), clusters) if b.cluster is not None]

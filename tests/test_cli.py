@@ -345,7 +345,8 @@ def test_prompts_combine_with_gsc_and_reuse_a_saved_candidates_file(tmp_path, mo
     assert code == 0
     by_prompt = {p["prompt"]: p["source"] for p in active}
     assert by_prompt["best generative ai course in india"] == "gsc"  # GSC version wins the duplicate
-    assert "generative ai course for working professionals" not in by_prompt  # no GSC match, no probe
+    # no GSC match and no probe, but kept: --prompts with --no-probe is a curated list
+    assert by_prompt["generative ai course for working professionals"] == "llm"
 
 
 def test_source_none_without_prompts_is_an_error(tmp_path, monkeypatch, caplog):
@@ -404,3 +405,15 @@ def test_dataforseo_tracks_billed_cost(load_fixture):
     provider.fetch_ai_overview("a")
     provider.fetch_ai_overview("b")
     assert provider.spent_usd == pytest.approx(0.004)  # the empty-tasks response cost 0
+
+
+def test_select_prompts_no_probe_keeps_the_curated_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    path = _prompt_file(tmp_path, "prompt,cluster\nwhat is a forward deployed engineer,fde\n"
+                                  "best generative ai course in india,genai\n")
+    assert cli.main(["select", "--source", "none", "--prompts", path, "--no-probe", "--dry-run"]) == 0
+    assert sorted(p["prompt"] for p in json.loads((tmp_path / "active.json").read_text())) == [
+        "best generative ai course in india", "what is a forward deployed engineer"]
+    rows = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "prompts.csv")))
+    assert {r["reason"] for r in rows} == {"curated, not probed"}

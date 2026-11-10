@@ -5,6 +5,7 @@ probe SERP check shows an AI Overview. Every candidate gets a decision and a rea
 """
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -16,6 +17,8 @@ from tracker.config import Cluster, GscQuery
 
 from .generate import Candidate
 from .groups import IntentGroups
+
+log = logging.getLogger(__name__)
 
 W_INTENT, W_DEMAND, W_AIO, W_PROGRAM = 0.35, 0.30, 0.25, 0.10
 MIN_WORDS, MAX_WORDS = 3, 12
@@ -142,11 +145,13 @@ def select_prompts(
             by_prompt[d.prompt] = d
             unique.append(d)
 
-    # 4. probe candidates with no GSC match
+    # 4. probe candidates with no GSC match (curated prompts are kept as they are)
     survivors: List[Decision] = []
     budget_hit = False
+    n_probes = sum(1 for d in unique if not d.gsc_query and not d.candidate.curated) if probe else 0
+    probe_no = 0
     for d in unique:
-        if d.gsc_query:
+        if d.gsc_query or d.candidate.curated:
             survivors.append(d)
             continue
         if not probe:
@@ -155,6 +160,8 @@ def select_prompts(
         if budget_hit:
             d.reason = "no GSC match; not probed (SERP budget used up)"
             continue
+        probe_no += 1
+        log.info("probe %d/%d: %s", probe_no, n_probes, d.prompt)
         try:
             # an incomplete AI Overview already proves one is shown, so don't pay for a retry
             res = provider.fetch_ai_overview(d.prompt, retry_incomplete=False)
@@ -174,11 +181,14 @@ def select_prompts(
             d.probe_aio = False
             d.reason = f"no GSC match (best {d.gsc_similarity:.0f}); probe showed no AI Overview"
 
-    # 5. score and keep the top N
+    # 5. score and keep the top N; curated prompts are always kept and take their slots first
     for d in survivors:
         d.score = score(d, max_imp, weights.get(d.candidate.cluster, 0), max_weight)
-    survivors.sort(key=lambda d: d.score, reverse=True)
+    survivors.sort(key=lambda d: (not d.candidate.curated, -d.score))
     for i, d in enumerate(survivors):
+        if d.candidate.curated:
+            d.status, d.reason = ACTIVE, "curated, not probed"
+            continue
         why = "GSC match" if d.gsc_query else "AI Overview on probe"
         if i < keep_top:
             d.status, d.reason = ACTIVE, f"kept: {why}"

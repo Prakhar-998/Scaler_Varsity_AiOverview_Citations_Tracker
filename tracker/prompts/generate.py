@@ -51,6 +51,7 @@ class Candidate:
     brand_tag: str = ""
     impressions: int = 0       # GSC impressions, for gsc-sourced candidates
     pre_drop: str = ""         # reason the source already rejected it; select_prompts logs it as dropped
+    curated: bool = False      # from a prompt file with --no-probe: kept without a GSC match or probe
 
 
 def classify_intent(prompt: str):
