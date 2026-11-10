@@ -248,11 +248,11 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                           "competitors": [], "organic_rank": None, "rank_match": "", "device": "",
                           "status": "not checked", "checked_at": ""})
 
-    # 7. trend: citation rate per run date
-    by_date = defaultdict(list)
+    # 7. trend: citation rate per check run (one timestamp per run, all devices)
+    by_run = defaultdict(list)
     for r in checks:
-        by_date[r.get("date", "")].append(r)
-    trend = [dict(_rates(rows), date=d) for d, rows in sorted(by_date.items()) if d]
+        by_run[_checked_at(r)].append(r)
+    trend = [dict(_rates(rows), run=at) for at, rows in sorted(by_run.items()) if at]
 
     return {"title": "Varsity AI Overview Citation Tracker", "sample": sample,
             "generated_at": (generated_at or datetime.now()).strftime("%Y-%m-%d %H:%M"),

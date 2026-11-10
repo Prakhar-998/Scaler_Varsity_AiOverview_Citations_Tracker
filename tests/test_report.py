@@ -104,10 +104,12 @@ def test_devices_are_separate_rows_and_unchecked_active_prompts_listed():
     assert r["kpis"]["prompts_tracked"] == 2
 
 
-def test_trend_one_point_per_run_date_and_clusters_in_config_order():
+def test_trend_one_point_per_check_run_and_clusters_in_config_order():
     r = report([check("a", date="2026-11-09", cited="yes"), check("b", date="2026-11-09"),
-                check("c", date="2026-11-10", cluster="genai"), check("d", date="2026-11-10")])
-    assert [(t["date"], t["citation_rate"]) for t in r["trend"]] == [("2026-11-09", 50.0), ("2026-11-10", 0.0)]
+                check("c", time="06:00", cluster="genai"), check("d", time="06:00", device="mobile"),
+                check("a", time="18:00", cited="yes")])
+    assert [(t["run"], t["citation_rate"]) for t in r["trend"]] == [
+        ("2026-11-09 09:00", 50.0), ("2026-11-10 06:00", 0.0), ("2026-11-10 18:00", 100.0)]  # two runs on one day
     assert [c["cluster"] for c in r["clusters"]] == ["fde", "genai"]
 
 

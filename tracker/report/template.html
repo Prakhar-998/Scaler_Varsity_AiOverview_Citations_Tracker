@@ -187,7 +187,7 @@ footer p { margin: 0 0 6px; }
 
   <section aria-labelledby="h-trend">
     <div class="sec-head"><div><h2 id="h-trend">Trend over runs</h2>
-      <p>Varsity citation rate per run date.</p></div></div>
+      <p>Varsity citation rate per check run.</p></div></div>
     <div class="chart" id="trend-chart"></div>
   </section>
 
@@ -566,7 +566,7 @@ footer p { margin: 0 0 6px; }
     var host = clear(document.getElementById("trend-chart"));
     var pts = D.trend.filter(function (t) { return t.citation_rate != null; });
     if (pts.length < 2) {
-      host.appendChild(empty("Needs 2+ runs on different dates" + (pts.length ? " (1 so far: " + pts[0].date + ")." : ".")));
+      host.appendChild(empty("Needs 2+ check runs" + (pts.length ? " (1 so far: " + pts[0].run + ")." : ".")));
       return;
     }
     var width = Math.max(host.clientWidth, 280), height = 220, padL = 44, padR = 24, padT = 16, padB = 28;
@@ -577,18 +577,18 @@ footer p { margin: 0 0 6px; }
     var maxV = Math.min(100, Math.ceil(top / stepV) * stepV);
     var x = function (i) { return padL + (pts.length === 1 ? plotW / 2 : (i / (pts.length - 1)) * plotW); };
     var y = function (v) { return padT + plotH - (v / maxV) * plotH; };
-    var s = svg("svg", { width: width, height: height, role: "img", "aria-label": "Varsity citation rate per run date" });
+    var s = svg("svg", { width: width, height: height, role: "img", "aria-label": "Varsity citation rate per check run" });
     for (var t = 0; t <= maxV; t += stepV) {
       s.appendChild(svg("line", { x1: padL, x2: width - padR, y1: y(t), y2: y(t),
         stroke: t === 0 ? "var(--baseline)" : "var(--grid)", "stroke-width": 1 }));
       var tl = svg("text", { x: padL - 8, y: y(t) + 4, "text-anchor": "end", class: "axis-label" });
       tl.textContent = Math.round(t) + "%"; s.appendChild(tl);
     }
-    var step = Math.ceil(pts.length / Math.max(1, Math.floor(plotW / 90)));
+    var step = Math.ceil(pts.length / Math.max(1, Math.floor(plotW / 110)));  // "11-10 15:49" labels
     pts.forEach(function (p, i) {
       if (i % step && i !== pts.length - 1) return;
       var dl = svg("text", { x: x(i), y: height - 8, "text-anchor": "middle", class: "axis-label" });
-      dl.textContent = p.date.slice(5); s.appendChild(dl);
+      dl.textContent = p.run.slice(5); s.appendChild(dl);
     });
     var d = pts.map(function (p, i) { return (i ? "L" : "M") + x(i) + "," + y(p.citation_rate); }).join("");
     s.appendChild(svg("path", { d: d, fill: "none", stroke: "var(--s1)", "stroke-width": 2,
@@ -610,7 +610,7 @@ footer p { margin: 0 0 6px; }
       pts.forEach(function (p, i) { if (Math.abs(x(i) - mx) < Math.abs(x(best) - mx)) best = i; });
       var p = pts[best];
       cross.setAttribute("x1", x(best)); cross.setAttribute("x2", x(best)); cross.setAttribute("visibility", "visible");
-      showTip(e, p.date, [{ label: "Varsity citation rate", value: pct(p.citation_rate), color: "var(--s1)" },
+      showTip(e, "Run " + p.run, [{ label: "Varsity citation rate", value: pct(p.citation_rate), color: "var(--s1)" },
         { label: "Cited / with sources", value: p.cited + " / " + p.ok },
         { label: "AI Overview presence", value: pct(p.aio_presence) }, { label: "Checks", value: String(p.checks) }]);
     });
