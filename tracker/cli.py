@@ -3,6 +3,7 @@
   python -m tracker select --blogs data/blogs.csv --gsc data/gsc.csv [--dry-run]
   python -m tracker check [--dry-run] [--save-raw]      # run twice a day at different times
   python -m tracker probe "best generative ai course in india"   # one SERP call, for spot checks
+  python -m tracker report                                       # dashboard/index.html from runs/
 
 Every command takes --provider serphouse|dataforseo|fake (default: SERP_PROVIDER, else
 `serp_provider` in config/settings.yaml: dataforseo for check and probe, serphouse for select)
@@ -289,6 +290,28 @@ def cmd_probe(args, settings) -> int:
     return 0
 
 
+DASHBOARD = ROOT / "dashboard"
+DEFAULT_BLOGS = ROOT / "data/private/blogs.csv"
+
+
+def cmd_report(args, settings) -> int:
+    from tracker.report import build_report, load_runs, render
+
+    clusters = load_clusters(active_only=False)
+    blogs_path = Path(args.blogs) if args.blogs else DEFAULT_BLOGS
+    blogs = load_blogs(blogs_path, clusters) if blogs_path.exists() else []
+    if not blogs:
+        log.warning("no blogs file at %s; gaps won't be mapped to a Varsity blog", blogs_path)
+    inputs = load_runs(Path(args.runs) if args.runs else RUNS)
+    if not inputs.checks:
+        log.warning("no checks.csv under %s yet; the dashboard will be mostly empty", args.runs or RUNS)
+    data = build_report(inputs, clusters, blogs)
+    out = render(data, Path(args.out) if args.out else DASHBOARD / "index.html")
+    log.info("dashboard: %s (%d checks, %d prompts, %d gaps, %d wins)", out, data["kpis"]["checks"],
+             len(data["prompts"]), len(data["gaps"]), len(data["wins"]))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="tracker", description="AI Overview citation tracker (Varsity)")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -321,6 +344,11 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("query")
     pr.add_argument("--save", help="write the raw response JSON to this path")
 
+    rp = sub.add_parser("report", help="build the static dashboard from runs/")
+    rp.add_argument("--out", help="output HTML (default: dashboard/index.html)")
+    rp.add_argument("--runs", help="folder with select/check outputs (default: runs/)")
+    rp.add_argument("--blogs", help="blogs CSV for mapping gaps to a Varsity blog (default: data/private/blogs.csv)")
+
     # also accepted after the command name; SUPPRESS keeps a value given before it
     for sp in (s, c, pr):
         sp.add_argument("--provider", choices=PROVIDERS, default=argparse.SUPPRESS,
@@ -337,7 +365,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     load_dotenv()
     settings = load_settings()
     try:
-        return {"select": cmd_select, "check": cmd_check, "probe": cmd_probe}[args.cmd](args, settings)
+        return {"select": cmd_select, "check": cmd_check, "probe": cmd_probe,
+                "report": cmd_report}[args.cmd](args, settings)
     except ProviderError as exc:
         log.error("%s", exc)
         return 2

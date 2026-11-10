@@ -130,3 +130,27 @@ def test_older_checks_without_a_device_column_still_load(tmp_path):
     _write(tmp_path / "dry-run-20261108-100000/checks.csv", old, [{k: v for k, v in check("a").items() if k in old}])
     r = build_report(load_runs(tmp_path), CLUSTERS, BLOGS)
     assert r["prompts"][0]["device"] == "" and r["kpis"]["checks"] == 1
+
+
+def test_render_embeds_data_safely(tmp_path):
+    import json
+    import re
+
+    from tracker.report import render
+
+    r = report([check("fde </script><script>alert(1)</script> course", domains="x.com")])
+    html = render(r, tmp_path / "index.html").read_text()
+    assert "/*__REPORT_DATA__*/" not in html and "</script><script>alert" not in html
+    blob = re.search(r'<script id="report-data" type="application/json">(.*?)</script>', html, re.S).group(1)
+    assert json.loads(blob.replace("<\\/", "</"))["prompts"][0]["prompt"].startswith("fde </script>")
+    assert "cdn" not in html.lower() and "fetch(" not in html  # self-contained, no network
+
+
+def test_report_command_writes_the_dashboard(tmp_path, monkeypatch):
+    from tracker import cli
+
+    _write(tmp_path / "runs/dry-run-20261110-120000/checks.csv", CHECK_HEADERS, [check("best fde course")])
+    out = tmp_path / "dash/index.html"
+    assert cli.main(["report", "--runs", str(tmp_path / "runs"), "--out", str(out),
+                     "--blogs", str(tmp_path / "missing.csv")]) == 0
+    assert "Varsity AI Overview Citation Tracker" in out.read_text()

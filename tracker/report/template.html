@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Varsity AI Overview Citation Tracker</title>
+<style>
+/* Tokens: dataviz reference palette (light + dark, validated). Charts are plain SVG; no network. */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f3f2ee;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #6f6d68;
+  --axis: #898781; --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834;
+  --good: #006300; --good-wash: rgba(12,163,12,0.10);
+  --warn: #8a5a00; --warn-wash: rgba(250,178,25,0.16);
+  --bad: #b02e2e; --bad-wash: rgba(208,59,59,0.10);
+  --focus: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #222220;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #a3a197;
+    --axis: #898781; --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926;
+    --good: #0ca30c; --good-wash: rgba(12,163,12,0.16);
+    --warn: #fab219; --warn-wash: rgba(250,178,25,0.14);
+    --bad: #e66767; --bad-wash: rgba(208,59,59,0.18);
+    --focus: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #222220;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #a3a197;
+  --axis: #898781; --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926;
+  --good: #0ca30c; --good-wash: rgba(12,163,12,0.16);
+  --warn: #fab219; --warn-wash: rgba(250,178,25,0.14);
+  --bad: #e66767; --bad-wash: rgba(208,59,59,0.18);
+  --focus: #3987e5;
+}
+* { box-sizing: border-box; }
+html { background: var(--page); }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+h1 { font-size: 22px; line-height: 1.25; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0; }
+.sub { color: var(--ink-2); margin: 0; }
+.badge {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; vertical-align: 3px;
+  font-size: 12px; font-weight: 600; background: var(--warn-wash); color: var(--warn);
+}
+button, select, input {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+button { cursor: pointer; }
+button:hover, select:hover { background: var(--surface-2); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+section {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin-top: 16px;
+}
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px; }
+.sec-head p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.count { color: var(--ink-2); font-size: 13px; }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 20px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kpi .label { color: var(--ink-2); font-size: 12.5px; }
+.kpi .value { font-size: 28px; font-weight: 650; line-height: 1.2; margin-top: 4px; }
+.kpi .value.small { font-size: 17px; font-weight: 600; padding-top: 8px; }
+.kpi .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+/* charts */
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; overflow: visible; }
+.chart text { fill: var(--ink-2); font-size: 12px; }
+.chart .axis-label { fill: var(--axis); font-variant-numeric: tabular-nums; }
+.chart .cat-label { fill: var(--ink); font-size: 13px; }
+.chart .value-label { fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 0 0 8px; color: var(--ink-2); font-size: 13px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.empty { color: var(--ink-2); padding: 20px; text-align: center; background: var(--surface-2); border-radius: 8px; }
+.tip {
+  position: fixed; z-index: 10; pointer-events: none; max-width: 280px; padding: 8px 10px; border-radius: 8px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); font-size: 12.5px; display: none;
+}
+.tip b { display: block; margin-bottom: 2px; }
+.tip .row { display: flex; gap: 8px; justify-content: space-between; color: var(--ink-2); }
+.tip .row i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--c); margin-right: 6px; }
+.tip .row span:last-child { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { position: sticky; top: 0; background: var(--surface-2); color: var(--ink-2); font-weight: 600;
+  white-space: nowrap; font-size: 12.5px; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th .arrow { color: var(--axis); margin-left: 4px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.prompt { font-weight: 550; min-width: 220px; }
+.domains { color: var(--ink-2); max-width: 360px; }
+.muted { color: var(--muted); }
+a { color: var(--s1); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap;
+  background: var(--surface-2); color: var(--ink-2); }
+.pill.ok, .pill.yes { background: var(--good-wash); color: var(--good); }
+.pill.incomplete { background: var(--warn-wash); color: var(--warn); }
+.pill.failed { background: var(--bad-wash); color: var(--bad); }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filters input { flex: 1 1 200px; min-width: 160px; }
+.filters label { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+@media (max-width: 640px) { .kpi .value { font-size: 24px; } h1 { font-size: 19px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">Varsity AI Overview Citation Tracker</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <button id="theme" type="button" aria-label="Toggle light or dark theme">Theme: auto</button>
+  </header>
+
+  <div class="kpis" id="kpis" aria-label="Headline numbers"></div>
+
+  <section aria-labelledby="h-cluster">
+    <div class="sec-head"><div><h2 id="h-cluster">By cluster</h2>
+      <p>AI Overview presence and Varsity citation rate (of AI Overviews with sources), all checks.</p></div></div>
+    <div class="legend" id="cluster-legend"></div>
+    <div class="chart" id="cluster-chart"></div>
+  </section>
+
+  <section aria-labelledby="h-gaps">
+    <div class="sec-head"><div><h2 id="h-gaps">Gaps: AI Overview shown, Varsity not cited</h2>
+      <p>The action list. Latest check per prompt and device, highest buying intent and GSC impressions first.</p></div>
+      <span class="count" id="gaps-count"></span></div>
+    <div id="gaps"></div>
+  </section>
+
+  <section aria-labelledby="h-wins">
+    <div class="sec-head"><div><h2 id="h-wins">Wins: Varsity cited</h2>
+      <p>Latest check per prompt and device.</p></div><span class="count" id="wins-count"></span></div>
+    <div id="wins"></div>
+  </section>
+
+  <section aria-labelledby="h-domains">
+    <div class="sec-head"><div><h2 id="h-domains">Top competing domains</h2>
+      <p id="domains-note"></p></div></div>
+    <div class="chart" id="domain-chart"></div>
+  </section>
+
+  <section aria-labelledby="h-all">
+    <div class="sec-head"><div><h2 id="h-all">All prompts</h2>
+      <p>Latest check per prompt and device. Click a column to sort.</p></div><span class="count" id="all-count"></span></div>
+    <div class="filters" role="group" aria-label="Filters">
+      <input id="f-text" type="search" placeholder="Search prompts or domains" aria-label="Search prompts or domains">
+      <label>Cluster <select id="f-cluster"></select></label>
+      <label>Device <select id="f-device"></select></label>
+      <label>Status <select id="f-status"></select></label>
+    </div>
+    <div class="table-wrap"><table id="all"></table></div>
+  </section>
+
+  <section aria-labelledby="h-trend">
+    <div class="sec-head"><div><h2 id="h-trend">Trend over runs</h2>
+      <p>Varsity citation rate per run date.</p></div></div>
+    <div class="chart" id="trend-chart"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script id="report-data" type="application/json">/*__REPORT_DATA__*/</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("report-data").textContent);
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  // ---------- helpers ----------
+  function el(tag, attrs, text) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === "class") n.className = attrs[k]; else n.setAttribute(k, attrs[k]);
+    });
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function svg(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    return n;
+  }
+  function pct(v) { return v == null ? "–" : v.toFixed(1) + "%"; }
+  function dash(v) { return v == null || v === "" ? "–" : String(v); }
+  function safeUrl(u) { return /^https?:\/\//i.test(u || "") ? u : ""; }
+  function link(url, text) {
+    var u = safeUrl(url);
+    if (!u) return document.createTextNode(text || "–");
+    var a = el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, text || u);
+    return a;
+  }
+  function shortUrl(u) { return (u || "").replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""); }
+  function empty(msg) { return el("div", { class: "empty" }, msg); }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); return n; }
+  var LABELS = { ok: "ok", incomplete: "incomplete", no_aio: "no AIO", failed: "failed", "not checked": "not checked" };
+
+  // ---------- tooltip ----------
+  var tip = document.getElementById("tip");
+  function showTip(evt, title, rows) {
+    clear(tip);
+    tip.appendChild(el("b", null, title));
+    rows.forEach(function (r) {
+      var row = el("div", { class: "row" });
+      var left = el("span");
+      if (r.color) { var i = el("i"); i.style.setProperty("--c", r.color); left.appendChild(i); }
+      left.appendChild(document.createTextNode(r.label));
+      row.appendChild(left); row.appendChild(el("span", null, r.value));
+      tip.appendChild(row);
+    });
+    tip.style.display = "block";
+    var x = evt.clientX + 14, y = evt.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > window.innerWidth - 8) x = evt.clientX - w - 14;
+    if (y + h > window.innerHeight - 8) y = evt.clientY - h - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip() { tip.style.display = "none"; }
+
+  // ---------- theme ----------
+  var themeBtn = document.getElementById("theme");
+  var themes = ["auto", "light", "dark"];
+  function applyTheme(t) {
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    themeBtn.textContent = "Theme: " + t;
+  }
+  var saved = "auto";
+  try { saved = localStorage.getItem("tracker-theme") || "auto"; } catch (e) {}
+  applyTheme(themes.indexOf(saved) >= 0 ? saved : "auto");
+  themeBtn.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme") || "auto";
+    var next = themes[(themes.indexOf(cur) + 1) % themes.length];
+    applyTheme(next);
+    try { localStorage.setItem("tracker-theme", next); } catch (e) {}
+  });
+
+  // ---------- header + KPIs ----------
+  if (D.sample) document.getElementById("title").appendChild(el("span", { class: "badge" }, "Sample data"));
+  document.getElementById("subtitle").textContent =
+    "Google India · AI Overviews · generated " + D.generated_at +
+    (D.prompts_from ? " · prompts from " + D.prompts_from : "");
+  var k = D.kpis;
+  var kpis = [
+    ["Prompts tracked", dash(k.prompts_tracked), "active in the latest select"],
+    ["Checks run", dash(k.checks), k.ok + " ok · " + k.incomplete + " incomplete · " + k.no_aio + " no AIO · " + k.failed + " failed"],
+    ["AI Overview presence", pct(k.aio_presence), "of successful checks"],
+    ["Varsity citation rate", pct(k.citation_rate), k.cited + " of " + k.ok + " AIOs with sources"],
+    ["Incomplete rate", pct(k.incomplete_rate), "AIOs whose sources didn't load"],
+    ["Last check", k.last_check_at || "–", "local time", true],
+    ["DataForSEO cost so far", k.cost_usd == null ? "–" : "$" + k.cost_usd.toFixed(3),
+      k.cost_usd == null ? "no runs in runs/cost_log.csv" : "billed, " + k.cost_runs + " logged runs"]
+  ];
+  var kbox = document.getElementById("kpis");
+  kpis.forEach(function (x) {
+    var c = el("div", { class: "kpi" });
+    c.appendChild(el("div", { class: "label" }, x[0]));
+    c.appendChild(el("div", { class: "value" + (x[3] ? " small" : "") }, x[1]));
+    c.appendChild(el("div", { class: "note" }, x[2]));
+    kbox.appendChild(c);
+  });
+
+  // ---------- horizontal bar chart (shared by cluster + domain charts) ----------
+  // rows: [{label, values:[...], tip:[...]}], series: [{name, color}], max, fmt(v)
+  function barPath(x0, y, w, h, r) {
+    // square at the baseline (left), 4px rounded data-end (right)
+    r = Math.min(r, w, h / 2);
+    if (w <= 0) return "";
+    return "M" + x0 + "," + y + "h" + (w - r) + "a" + r + "," + r + " 0 0 1 " + r + "," + r +
+      "v" + (h - 2 * r) + "a" + r + "," + r + " 0 0 1 " + (-r) + "," + r + "h" + (-(w - r)) + "z";
+  }
+  function hbar(host, opts) {
+    clear(host);
+    var width = Math.max(host.clientWidth, 280);
+    var labelW = Math.min(opts.labelWidth || 200, width * 0.38);
+    var valueW = opts.valueWidth || 64;
+    var bar = 18, gap = 2, groupGap = 16, n = opts.series.length;
+    var groupH = n * bar + (n - 1) * gap;
+    var top = 4, axisH = 20;
+    var height = top + opts.rows.length * (groupH + groupGap) - groupGap + axisH + 8;
+    var plotW = width - labelW - valueW;
+    var s = svg("svg", { width: width, height: height, role: "img", "aria-label": opts.aria });
+    var x = function (v) { return labelW + (opts.max ? (v / opts.max) * plotW : 0); };
+    // recessive grid + ticks
+    opts.ticks.forEach(function (t) {
+      var gx = x(t);
+      s.appendChild(svg("line", { x1: gx, x2: gx, y1: top, y2: height - axisH - 4,
+        stroke: t === 0 ? "var(--baseline)" : "var(--grid)", "stroke-width": 1 }));
+      var tl = svg("text", { x: gx, y: height - 6, "text-anchor": "middle", class: "axis-label" });
+      tl.textContent = opts.tickFmt(t); s.appendChild(tl);
+    });
+    opts.rows.forEach(function (row, i) {
+      var gy = top + i * (groupH + groupGap);
+      var cl = svg("text", { x: labelW - 10, y: gy + groupH / 2 + 4, "text-anchor": "end", class: "cat-label" });
+      cl.textContent = row.label; s.appendChild(cl);
+      row.values.forEach(function (v, j) {
+        var y = gy + j * (bar + gap);
+        var w = v == null ? 0 : Math.max(x(v) - labelW, v > 0 ? 2 : 0);
+        if (w > 0) s.appendChild(svg("path", { d: barPath(labelW, y, w, bar, 4), fill: opts.series[j].color }));
+        var vl = svg("text", { x: labelW + w + 6, y: y + bar / 2 + 4, class: "value-label" });
+        vl.textContent = opts.fmt(v, row, j); s.appendChild(vl);
+      });
+      // hit target: the whole group row, bigger than the marks
+      var hit = svg("rect", { x: 0, y: gy - groupGap / 2, width: width, height: groupH + groupGap,
+        fill: "transparent" });
+      hit.addEventListener("mousemove", function (e) { showTip(e, row.label, row.tip); });
+      hit.addEventListener("mouseleave", hideTip);
+      s.appendChild(hit);
+    });
+    host.appendChild(s);
+  }
+
+  // ---------- 2. by cluster ----------
+  var SERIES = [{ name: "AI Overview presence", color: "var(--s1)" },
+                { name: "Varsity citation rate", color: "var(--s2)" }];
+  var legend = document.getElementById("cluster-legend");
+  SERIES.forEach(function (s) { var sp = el("span", null, s.name); sp.style.setProperty("--c", s.color); legend.appendChild(sp); });
+  function drawClusters() {
+    var host = document.getElementById("cluster-chart");
+    if (!D.clusters.length) { clear(host).appendChild(empty("No checks yet. Run `check`, then `report`.")); legend.style.display = "none"; return; }
+    hbar(host, {
+      aria: "AI Overview presence and Varsity citation rate by cluster",
+      series: SERIES, max: 100, ticks: [0, 25, 50, 75, 100], tickFmt: function (t) { return t + "%"; },
+      rows: D.clusters.map(function (c) {
+        return { label: c.name, values: [c.aio_presence, c.citation_rate], tip: [
+          { label: "AI Overview presence", value: pct(c.aio_presence), color: "var(--s1)" },
+          { label: "Varsity citation rate", value: pct(c.citation_rate), color: "var(--s2)" },
+          { label: "Checks", value: String(c.checks) },
+          { label: "Varsity cited / with sources", value: c.cited + " / " + c.ok }] };
+      }),
+      fmt: function (v) { return pct(v); }
+    });
+  }
+
+  // ---------- tables ----------
+  function table(cols, rows, opts) {
+    var t = el("table"), thead = el("thead"), tr = el("tr");
+    cols.forEach(function (c) { tr.appendChild(el("th", c.num ? { class: "num" } : null, c.label)); });
+    thead.appendChild(tr); t.appendChild(thead);
+    var tb = el("tbody");
+    rows.forEach(function (r) {
+      var row = el("tr");
+      cols.forEach(function (c) {
+        var td = el("td", { class: (c.cls || "") + (c.num ? " num" : "") });
+        var v = c.render(r);
+        if (v instanceof Node) td.appendChild(v); else td.textContent = v;
+        row.appendChild(td);
+      });
+      tb.appendChild(row);
+    });
+    t.appendChild(tb);
+    var w = el("div", { class: "table-wrap" }); w.appendChild(t);
+    return w;
+  }
+  function domainsText(list) { return list && list.length ? list.join(", ") : "–"; }
+  function rankText(r, m) { return r == null ? "not in top results" : "#" + r + (m === "domain" ? " (domain)" : ""); }
+
+  // ---------- 3. gaps ----------
+  document.getElementById("gaps-count").textContent = D.gaps.length + " prompts";
+  var gapsHost = document.getElementById("gaps"), GAPS_SHOWN = 15, gapsAll = false;
+  var gapCols = [
+    { label: "#", num: true, render: function (r) { return String(D.gaps.indexOf(r) + 1); } },
+    { label: "Prompt", cls: "prompt", render: function (r) { return r.prompt; } },
+    { label: "Cluster", render: function (r) { return r.cluster; } },
+    { label: "Intent", render: function (r) { return r.intent; } },
+    { label: "Impr.", num: true, render: function (r) { return r.impressions ? r.impressions.toLocaleString() : "–"; } },
+    { label: "Cited instead", cls: "domains", render: function (r) { return domainsText(r.competitors); } },
+    { label: "Our organic rank", render: function (r) { return rankText(r.organic_rank, r.rank_match); } },
+    { label: "Varsity blog to improve", render: function (r) {
+        if (!r.blog_title) return el("span", { class: "muted" }, "no matching blog: new content?");
+        var span = el("span"); span.appendChild(link(r.blog_url, r.blog_title));
+        span.appendChild(el("div", { class: "muted" }, r.blog_how)); return span; } },
+    { label: "Device", render: function (r) { return dash(r.device); } }
+  ];
+  function drawGaps() {
+    clear(gapsHost);
+    if (!D.gaps.length) { gapsHost.appendChild(empty("No gaps: every AI Overview with sources cites Varsity, or nothing is checked yet.")); return; }
+    gapsHost.appendChild(table(gapCols, gapsAll ? D.gaps : D.gaps.slice(0, GAPS_SHOWN)));
+    if (D.gaps.length > GAPS_SHOWN) {
+      var more = el("button", { type: "button", style: "margin-top:12px" },
+        gapsAll ? "Show top " + GAPS_SHOWN : "Show all " + D.gaps.length + " gaps");
+      more.addEventListener("click", function () { gapsAll = !gapsAll; drawGaps(); });
+      gapsHost.appendChild(more);
+    }
+  }
+  drawGaps();
+
+  // ---------- 4. wins ----------
+  document.getElementById("wins-count").textContent = D.wins.length + " prompts";
+  var winsHost = document.getElementById("wins");
+  if (!D.wins.length) winsHost.appendChild(empty("No Varsity citations yet."));
+  else winsHost.appendChild(table([
+    { label: "Prompt", cls: "prompt", render: function (r) { return r.prompt; } },
+    { label: "Cluster", render: function (r) { return r.cluster; } },
+    { label: "Position", num: true, render: function (r) { return r.position ? "#" + r.position : "–"; } },
+    { label: "Cited URL", render: function (r) { return link(r.cited_url, shortUrl(r.cited_url)); } },
+    { label: "Device", render: function (r) { return dash(r.device); } },
+    { label: "Checked", render: function (r) { return r.checked_at; } }
+  ], D.wins));
+
+  // ---------- 5. domains ----------
+  document.getElementById("domains-note").textContent = D.aio_with_sources
+    ? "Share of the " + D.aio_with_sources + " latest AI Overviews with sources that cite each domain."
+    : "";
+  function drawDomains() {
+    var host = document.getElementById("domain-chart");
+    if (!D.domains.length) { clear(host).appendChild(empty("No AI Overviews with sources yet.")); return; }
+    var maxShare = Math.max.apply(null, D.domains.map(function (d) { return d.share; }));
+    var top = Math.min(100, Math.ceil(maxShare / 20) * 20 || 20);
+    var ticks = []; for (var t = 0; t <= top; t += top / 4) ticks.push(t);
+    hbar(host, {
+      aria: "Top competing domains by share of AI Overviews citing them",
+      series: [{ name: "Share of AIOs", color: "var(--s1)" }], max: top, ticks: ticks, labelWidth: 220, valueWidth: 96,
+      tickFmt: function (t) { return Math.round(t) + "%"; },
+      rows: D.domains.map(function (d) {
+        return { label: d.domain, values: [d.share], tip: [
+          { label: "AI Overviews citing", value: d.count + " of " + D.aio_with_sources },
+          { label: "Share", value: pct(d.share) }] };
+      }),
+      fmt: function (v, row) { var d = D.domains[D.domains.map(function (x) { return x.domain; }).indexOf(row.label)];
+        return d.count + " · " + pct(v); }
+    });
+  }
+
+  // ---------- 6. all prompts ----------
+  var COLS = [
+    { key: "prompt", label: "Prompt", cls: "prompt" },
+    { key: "cluster", label: "Cluster" },
+    { key: "source", label: "Source" },
+    { key: "brand_tag", label: "Brand tag" },
+    { key: "aio", label: "AIO" },
+    { key: "varsity", label: "Varsity cited" },
+    { key: "position", label: "Pos.", num: true },
+    { key: "competitors", label: "Competitors", cls: "domains" },
+    { key: "organic_rank", label: "Organic", num: true },
+    { key: "device", label: "Device" },
+    { key: "status", label: "Status" },
+    { key: "checked_at", label: "Checked at" }
+  ];
+  var sortKey = "checked_at", sortDir = -1;
+  var fText = document.getElementById("f-text"), fCluster = document.getElementById("f-cluster"),
+      fDevice = document.getElementById("f-device"), fStatus = document.getElementById("f-status");
+  function fillSelect(sel, values, fmt) {
+    sel.appendChild(el("option", { value: "" }, "All"));
+    values.forEach(function (v) { sel.appendChild(el("option", { value: v }, fmt ? fmt(v) : v)); });
+  }
+  function uniq(key) {
+    var seen = {}; D.prompts.forEach(function (p) { if (p[key] !== "" && p[key] != null) seen[p[key]] = 1; });
+    return Object.keys(seen).sort();
+  }
+  fillSelect(fCluster, uniq("cluster"));
+  fillSelect(fDevice, uniq("device"));
+  fillSelect(fStatus, uniq("status"), function (v) { return LABELS[v] || v; });
+  function cell(p, c) {
+    var v = p[c.key];
+    if (c.key === "competitors") return domainsText(v);
+    if (c.key === "position") return v ? "#" + v : "–";
+    if (c.key === "organic_rank") return v == null ? "–" : "#" + v + (p.rank_match === "domain" ? " (d)" : "");
+    if (c.key === "status") return el("span", { class: "pill " + v.replace(/\s/g, "-") }, LABELS[v] || v);
+    if (c.key === "varsity") return v === "yes" ? el("span", { class: "pill yes" }, "✓ yes") : dash(v);
+    return dash(v);
+  }
+  function sortVal(p, key) {
+    var v = p[key];
+    if (key === "competitors") return v.length;
+    if (v == null || v === "") return null;
+    return v;
+  }
+  function drawAll() {
+    var q = fText.value.trim().toLowerCase();
+    var rows = D.prompts.filter(function (p) {
+      return (!fCluster.value || p.cluster === fCluster.value) && (!fDevice.value || p.device === fDevice.value) &&
+        (!fStatus.value || p.status === fStatus.value) &&
+        (!q || p.prompt.toLowerCase().indexOf(q) >= 0 || p.competitors.join(" ").indexOf(q) >= 0);
+    });
+    rows.sort(function (a, b) {
+      var x = sortVal(a, sortKey), y = sortVal(b, sortKey);
+      if (x === y) return a.prompt < b.prompt ? -1 : 1;
+      if (x == null) return 1; if (y == null) return -1;   // blanks last either way
+      return (x < y ? -1 : 1) * sortDir;
+    });
+    var t = clear(document.getElementById("all"));
+    var thead = el("thead"), tr = el("tr");
+    COLS.forEach(function (c) {
+      var th = el("th", { class: "sortable" + (c.num ? " num" : ""), tabindex: "0", scope: "col",
+        "aria-sort": c.key === sortKey ? (sortDir > 0 ? "ascending" : "descending") : "none" }, c.label);
+      if (c.key === sortKey) th.appendChild(el("span", { class: "arrow" }, sortDir > 0 ? "▲" : "▼"));
+      function go() { if (sortKey === c.key) sortDir = -sortDir; else { sortKey = c.key; sortDir = 1; } drawAll(); }
+      th.addEventListener("click", go);
+      th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr); t.appendChild(thead);
+    var tb = el("tbody");
+    rows.forEach(function (p) {
+      var row = el("tr");
+      COLS.forEach(function (c) {
+        var td = el("td", { class: (c.cls || "") + (c.num ? " num" : "") });
+        var v = cell(p, c);
+        if (v instanceof Node) td.appendChild(v); else td.textContent = v;
+        row.appendChild(td);
+      });
+      tb.appendChild(row);
+    });
+    if (!rows.length) {
+      var r = el("tr"), td = el("td", { colspan: COLS.length, class: "muted" }, "No prompts match these filters.");
+      r.appendChild(td); tb.appendChild(r);
+    }
+    t.appendChild(tb);
+    document.getElementById("all-count").textContent = rows.length + " of " + D.prompts.length + " rows";
+  }
+  [fText, fCluster, fDevice, fStatus].forEach(function (n) { n.addEventListener("input", drawAll); });
+
+  // ---------- 7. trend ----------
+  function drawTrend() {
+    var host = clear(document.getElementById("trend-chart"));
+    var pts = D.trend.filter(function (t) { return t.citation_rate != null; });
+    if (pts.length < 2) {
+      host.appendChild(empty("Needs 2+ runs on different dates" + (pts.length ? " (1 so far: " + pts[0].date + ")." : ".")));
+      return;
+    }
+    var width = Math.max(host.clientWidth, 280), height = 220, padL = 44, padR = 24, padT = 16, padB = 28;
+    var plotW = width - padL - padR, plotH = height - padT - padB;
+    var maxV = Math.max(25, Math.ceil(Math.max.apply(null, pts.map(function (p) { return p.citation_rate; })) / 25) * 25);
+    var x = function (i) { return padL + (pts.length === 1 ? plotW / 2 : (i / (pts.length - 1)) * plotW); };
+    var y = function (v) { return padT + plotH - (v / maxV) * plotH; };
+    var s = svg("svg", { width: width, height: height, role: "img", "aria-label": "Varsity citation rate per run date" });
+    for (var t = 0; t <= maxV; t += maxV / 4) {
+      s.appendChild(svg("line", { x1: padL, x2: width - padR, y1: y(t), y2: y(t),
+        stroke: t === 0 ? "var(--baseline)" : "var(--grid)", "stroke-width": 1 }));
+      var tl = svg("text", { x: padL - 8, y: y(t) + 4, "text-anchor": "end", class: "axis-label" });
+      tl.textContent = Math.round(t) + "%"; s.appendChild(tl);
+    }
+    var step = Math.ceil(pts.length / Math.max(1, Math.floor(plotW / 90)));
+    pts.forEach(function (p, i) {
+      if (i % step && i !== pts.length - 1) return;
+      var dl = svg("text", { x: x(i), y: height - 8, "text-anchor": "middle", class: "axis-label" });
+      dl.textContent = p.date.slice(5); s.appendChild(dl);
+    });
+    var d = pts.map(function (p, i) { return (i ? "L" : "M") + x(i) + "," + y(p.citation_rate); }).join("");
+    s.appendChild(svg("path", { d: d, fill: "none", stroke: "var(--s1)", "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    pts.forEach(function (p, i) {
+      s.appendChild(svg("circle", { cx: x(i), cy: y(p.citation_rate), r: 4, fill: "var(--s1)",
+        stroke: "var(--surface)", "stroke-width": 2 }));
+    });
+    var last = pts[pts.length - 1];
+    var ll = svg("text", { x: x(pts.length - 1), y: y(last.citation_rate) - 10, "text-anchor": "end", class: "value-label" });
+    ll.textContent = pct(last.citation_rate); s.appendChild(ll);
+    // crosshair + tooltip
+    var cross = svg("line", { y1: padT, y2: padT + plotH, stroke: "var(--axis)", "stroke-width": 1,
+      "stroke-dasharray": "3 3", visibility: "hidden" });
+    s.appendChild(cross);
+    var hit = svg("rect", { x: padL, y: padT, width: plotW, height: plotH, fill: "transparent" });
+    hit.addEventListener("mousemove", function (e) {
+      var r = s.getBoundingClientRect(), mx = e.clientX - r.left, best = 0;
+      pts.forEach(function (p, i) { if (Math.abs(x(i) - mx) < Math.abs(x(best) - mx)) best = i; });
+      var p = pts[best];
+      cross.setAttribute("x1", x(best)); cross.setAttribute("x2", x(best)); cross.setAttribute("visibility", "visible");
+      showTip(e, p.date, [{ label: "Varsity citation rate", value: pct(p.citation_rate), color: "var(--s1)" },
+        { label: "Cited / with sources", value: p.cited + " / " + p.ok },
+        { label: "AI Overview presence", value: pct(p.aio_presence) }, { label: "Checks", value: String(p.checks) }]);
+    });
+    hit.addEventListener("mouseleave", function () { cross.setAttribute("visibility", "hidden"); hideTip(); });
+    s.appendChild(hit);
+    host.appendChild(s);
+  }
+
+  document.getElementById("footer").textContent =
+    "Rates: AI Overview presence = (ok + incomplete) / successful checks; Varsity citation rate = cited / ok " +
+    "(AIOs with sources); failed checks are left out of every rate. Generated by `python -m tracker report`" +
+    (D.sample ? " --sample (fake data)." : ".");
+
+  function drawCharts() { drawClusters(); drawDomains(); drawTrend(); }
+  drawCharts(); drawAll();
+  var timer;
+  window.addEventListener("resize", function () { clearTimeout(timer); timer = setTimeout(drawCharts, 120); });
+})();
+</script>
+</body>
+</html>
