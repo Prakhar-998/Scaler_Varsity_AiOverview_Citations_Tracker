@@ -39,13 +39,16 @@ def test_kpis_match_summary_definitions():
     r = report([check("a", cited="yes"), check("b"), check("c", status="incomplete"), check("d", status="no_aio"),
                 check("e", status="failed")],
                costs=[{"provider": "dataforseo", "billed usd": "0.0120"}, {"provider": "serphouse", "billed usd": ""},
-                      {"provider": "dataforseo", "billed usd": "0.0040"}])
+                      {"provider": "dataforseo", "billed usd": "0.0040"},
+                      {"provider": "dataforseo", "estimated usd": "0.2000", "billed usd": ""}])
     k = r["kpis"]
     assert (k["checks"], k["ok"], k["failed"]) == (5, 2, 1)
     assert k["aio_presence"] == 75.0     # (2 ok + 1 incomplete) / 4 non-failed
     assert k["citation_rate"] == 50.0    # 1 cited / 2 ok
     assert k["incomplete_rate"] == 33.3  # 1 / 3 AIOs shown
-    assert k["cost_usd"] == 0.016 and k["last_check_at"] == "2026-11-10 09:00"
+    assert k["cost_usd"] == 0.216 and k["last_check_at"] == "2026-11-10 09:00"
+    assert (k["cost_billed_usd"], k["cost_runs_billed"], k["cost_estimated_usd"], k["cost_runs_estimated"]) == (
+        0.016, 2, 0.2, 1)  # billed where logged, else the run's estimate
 
 
 def test_gaps_sorted_by_intent_then_impressions_with_mapped_blog():
@@ -61,7 +64,7 @@ def test_gaps_sorted_by_intent_then_impressions_with_mapped_blog():
                                                 "fde salary india"]
     best = next(g for g in r["gaps"] if g["prompt"] == "best fde course")
     assert best["competitors"] == ["fde.academy", "learnbay.co"]
-    assert best["blog_url"].endswith("/fde-training/") and best["blog_how"].startswith("closest match")
+    assert best["blog_url"].endswith("/fde-training/") and best["blog_how"] == "closest title/keyword match"
     top = next(g for g in r["gaps"] if g["prompt"] == "top fde training")
     assert top["blog_title"] == "GenAI Roadmap" and top["blog_how"] == "drafted from"
     assert r["gaps"][-1]["organic_rank"] == 6

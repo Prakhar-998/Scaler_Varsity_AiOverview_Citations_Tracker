@@ -121,7 +121,7 @@ def _map_blog(prompt: str, cluster: str, named: str, blogs: List[Blog]) -> Dict[
         if score > best_score:
             best, best_score = b, score
     if best is not None and best_score >= BLOG_MATCH_THRESHOLD:
-        return {"title": best.title, "url": best.url, "how": f"closest match ({best_score:.0f})"}
+        return {"title": best.title, "url": best.url, "how": "closest title/keyword match"}
     return {"title": "", "url": "", "how": "no matching blog"}
 
 
@@ -143,12 +143,22 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                 "impressions": int(imp.group(1)) if imp else 0, "blog": blog.group(1) if blog else ""}
 
     # 1. headline
-    billed = [float(r["billed usd"]) for r in inputs.costs
-              if r.get("provider") == "dataforseo" and r.get("billed usd")]
+    # DataForSEO spend: the billed amount where the run logged it, else the run's estimate
+    billed = estimated = 0.0
+    n_billed = n_estimated = 0
+    for r in inputs.costs:
+        if r.get("provider") != "dataforseo":
+            continue
+        if r.get("billed usd"):
+            billed += float(r["billed usd"]); n_billed += 1
+        elif r.get("estimated usd"):
+            estimated += float(r["estimated usd"]); n_estimated += 1
     overall = _rates(checks)
     kpis = dict(overall, prompts_tracked=len(active) or len({r["prompt"] for r in latest}),
                 last_check_at=max((_checked_at(r) for r in checks), default=""),
-                cost_usd=round(sum(billed), 4) if billed else None, cost_runs=len(billed))
+                cost_usd=round(billed + estimated, 4) if n_billed + n_estimated else None,
+                cost_billed_usd=round(billed, 4), cost_estimated_usd=round(estimated, 4),
+                cost_runs_billed=n_billed, cost_runs_estimated=n_estimated)
 
     # 2. by cluster
     by_cluster = defaultdict(list)

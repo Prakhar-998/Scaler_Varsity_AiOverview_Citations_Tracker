@@ -277,7 +277,9 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     ["Incomplete rate", pct(k.incomplete_rate), "AIOs whose sources didn't load"],
     ["Last check", k.last_check_at || "–", "local time", true],
     ["DataForSEO cost so far", k.cost_usd == null ? "–" : "$" + k.cost_usd.toFixed(3),
-      k.cost_usd == null ? "no runs in runs/cost_log.csv" : "billed, " + k.cost_runs + " logged runs"]
+      k.cost_usd == null ? "no runs in runs/cost_log.csv"
+        : "$" + k.cost_billed_usd.toFixed(3) + " billed" + (k.cost_runs_estimated
+          ? " + $" + k.cost_estimated_usd.toFixed(3) + " est." : "")]
   ];
   var kbox = document.getElementById("kpis");
   kpis.forEach(function (x) {
