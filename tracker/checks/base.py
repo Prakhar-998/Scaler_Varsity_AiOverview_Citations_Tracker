@@ -85,6 +85,8 @@ class SerpProvider:
 
     name = "base"
     device = "mobile"
+    # USD actually billed so far, for providers that report it per response (DataForSEO); else None
+    spent_usd: Optional[float] = None
 
     def fetch_ai_overview(self, query: str, retry_incomplete: bool = True) -> SerpResult:
         """`retry_incomplete=False` skips the late-load retry, e.g. for select probes, where an

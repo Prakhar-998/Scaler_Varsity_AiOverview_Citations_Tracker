@@ -72,6 +72,7 @@ class DataForSeoProvider(SerpProvider):
         self.auth = (login, password)
         self.budget = budget
         self.device = device
+        self.spent_usd = 0.0
         self.session = session or requests.Session()
         self.retries = retries
         self.timeout = timeout
@@ -114,6 +115,8 @@ class DataForSeoProvider(SerpProvider):
                         body = resp.json()
                     except ValueError:
                         return SerpResult.failed(query, "response was not JSON")
+                    if isinstance(body, dict) and isinstance(body.get("cost"), (int, float)):
+                        self.spent_usd += body["cost"]  # what DataForSEO billed for this call
                     return parse_response(query, body)
                 last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
                 if resp.status_code < 500 and resp.status_code != 429:

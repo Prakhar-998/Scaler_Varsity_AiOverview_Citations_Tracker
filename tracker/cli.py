@@ -11,6 +11,7 @@ and --device desktop|mobile (repeatable; default: `devices` in config/settings.y
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import os
@@ -31,6 +32,9 @@ from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates,
 log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
 ACTIVE_PROMPTS = RUNS / "active_prompts.json"
+COST_LOG = RUNS / "cost_log.csv"
+COST_HEADERS = ["date", "time", "command", "provider", "devices", "checks", "serp calls", "estimated usd",
+                "billed usd"]
 PROVIDERS = ("serphouse", "dataforseo", "fake")
 
 
@@ -159,6 +163,10 @@ def cmd_select(args, settings) -> int:
     decisions = select_prompts(candidates, gsc, clusters, provider, settings)
     kept = [d for d in decisions if d.status == ACTIVE]
     log.info("kept %d of %d candidates; %d probe SERP calls", len(kept), len(decisions), budget.used)
+    if provider is not None:
+        rate = (settings.get("cost_per_check_usd") or {}).get(provider.name)
+        record_cost("select", [provider], budget.used, budget.used,
+                    None if rate is None else float(rate) * budget.used)
 
     RUNS.mkdir(exist_ok=True)
     ACTIVE_PROMPTS.write_text(json.dumps(
@@ -177,6 +185,28 @@ def log_cost_estimate(provider: str, checks: int, settings) -> Optional[float]:
     log.info("estimated cost: %d checks x $%.3f = $%.2f on %s (retries cost extra)",
              checks, float(rate), cost, provider)
     return cost
+
+
+def record_cost(command: str, providers: list, checks: int, calls: int, estimate: Optional[float],
+                when: Optional[datetime] = None) -> None:
+    """Append one row per run to runs/cost_log.csv. `billed usd` is what the provider reported
+    (DataForSEO returns the cost of each call); blank when the provider doesn't report it."""
+    if not providers or calls == 0:
+        return
+    when = when or datetime.now()
+    spent = [p.spent_usd for p in providers if p.spent_usd is not None]
+    billed = f"{sum(spent):.4f}" if spent else ""
+    new = not COST_LOG.exists()
+    COST_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(COST_LOG, "a", newline="") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(COST_HEADERS)
+        w.writerow([when.strftime("%Y-%m-%d"), when.strftime("%H:%M"), command, providers[0].name,
+                    " ".join(p.device for p in providers), checks, calls,
+                    "" if estimate is None else f"{estimate:.4f}", billed])
+    if billed:
+        log.info("billed: $%s on %s", billed, providers[0].name)
 
 
 def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None):
@@ -238,12 +268,16 @@ def cmd_check(args, settings) -> int:
     col = CHECK_HEADERS.index("check status")
     counts = {s: sum(r[col] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
     log.info("%d checks %s; %d SERP calls used", len(rows), counts, budget.used)
+    record_cost("check", providers, len(rows), budget.used, cost)
     return 0
 
 
 def cmd_probe(args, settings) -> int:
-    provider = make_provider(args, settings, CallBudget(3), resolve_devices(args, settings)[0])
+    budget = CallBudget(3)
+    provider = make_provider(args, settings, budget, resolve_devices(args, settings)[0])
     result: SerpResult = provider.fetch_ai_overview(args.query)
+    rate = (settings.get("cost_per_check_usd") or {}).get(provider.name)
+    record_cost("probe", [provider], 1, budget.used, None if rate is None else float(rate) * budget.used)
     if args.save:
         Path(args.save).write_text(json.dumps(result.raw, indent=2))
     m = match_citations(result)

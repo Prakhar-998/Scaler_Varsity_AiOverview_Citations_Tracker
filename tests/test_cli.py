@@ -1,3 +1,4 @@
+import pytest
 import csv
 import json
 from datetime import datetime
@@ -373,3 +374,28 @@ def test_check_aborts_before_any_call_when_over_max_cost(tmp_path, monkeypatch, 
     assert cli.main(["--provider", "fake", "check", "--dry-run", "--max-cost", "0.40"]) == 3
     assert calls == [] and "estimated cost $0.50 is over --max-cost $0.40" in caplog.text
     assert cli.main(["--provider", "fake", "check", "--dry-run", "--max-cost", "0.50"]) == 0
+
+
+def test_check_appends_to_the_cost_log(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"],
+                                                      "cost_per_check_usd": {"fake": 0.004}})
+    _check(tmp_path, monkeypatch)
+    _check(tmp_path, monkeypatch)
+    rows = list(csv.DictReader(open(tmp_path / "cost_log.csv")))
+    assert len(rows) == 2
+    assert {k: rows[0][k] for k in ("command", "provider", "devices", "checks", "serp calls", "estimated usd",
+                                    "billed usd")} == {"command": "check", "provider": "fake", "devices": "desktop",
+                                                       "checks": "2", "serp calls": "2", "estimated usd": "0.0080",
+                                                       "billed usd": ""}
+
+
+def test_dataforseo_tracks_billed_cost(load_fixture):
+    from tests.test_dataforseo import FakeResponse, FakeSession
+    from tracker.checks.dataforseo import DataForSeoProvider
+
+    session = FakeSession([FakeResponse(body=load_fixture("dataforseo/aio_fde_salary_india_desktop.json")),
+                           FakeResponse(body=load_fixture("dataforseo/no_tasks_ok_envelope.json"))])
+    provider = DataForSeoProvider("l", "p", session=session, backoff=0)
+    provider.fetch_ai_overview("a")
+    provider.fetch_ai_overview("b")
+    assert provider.spent_usd == pytest.approx(0.004)  # the empty-tasks response cost 0
