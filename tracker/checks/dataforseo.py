@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from .base import (
+    STATUS_FAILED,
     STATUS_INCOMPLETE,
     STATUS_NO_AIO,
     STATUS_OK,
@@ -43,6 +44,25 @@ log = logging.getLogger(__name__)
 
 ENDPOINT = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
 OK_CODE = 20000
+# Task/envelope status codes worth one retry: 40101 "Internal SE Server Error" (5 of 37 tasks on
+# 2026-11-10) and DataForSEO's 5xxxx internal errors. Anything else (bad field, auth) won't change.
+TRANSIENT_CODES = {40101}
+
+
+def is_transient(code: Any) -> bool:
+    return isinstance(code, int) and (code in TRANSIENT_CODES or 50000 <= code < 60000)
+
+
+def status_code(body: Any) -> Optional[int]:
+    """The status code that failed the response: the envelope's if it isn't OK, else the first task's."""
+    if not isinstance(body, dict):
+        return None
+    if body.get("status_code") != OK_CODE:
+        return body.get("status_code")
+    tasks = body.get("tasks")
+    if isinstance(tasks, list) and tasks and isinstance(tasks[0], dict):
+        return tasks[0].get("status_code")
+    return None
 DEFAULT_PARAMS = {
     "location_code": 2356,  # India
     "language_code": "en",
@@ -66,6 +86,8 @@ class DataForSeoProvider(SerpProvider):
         backoff: float = 2.0,
         incomplete_retries: int = 1,
         incomplete_delay: float = 5.0,
+        transient_retries: int = 1,
+        transient_delay: float = 5.0,
     ):
         if not login or not password:
             raise ValueError("DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD must be set")
@@ -79,11 +101,25 @@ class DataForSeoProvider(SerpProvider):
         self.backoff = backoff
         self.incomplete_retries = incomplete_retries
         self.incomplete_delay = incomplete_delay
+        self.transient_retries = transient_retries
+        self.transient_delay = transient_delay
 
     def fetch_ai_overview(self, query: str, retry_incomplete: bool = True) -> SerpResult:
-        """Fetch once; if the AI Overview still came back without sources, retry once
-        unless `retry_incomplete` is False."""
+        """Fetch once. A task that failed with a transient status (40101, 5xxxx) is retried once;
+        an AI Overview that came back without sources is retried once unless `retry_incomplete`
+        is False. Every retry is a billed call and counts against the budget."""
         result = self._fetch(query)
+        for _ in range(self.transient_retries):
+            code = status_code(result.raw) if result.status == STATUS_FAILED else None
+            if not is_transient(code):
+                break
+            log.warning("DataForSEO %s for %r; retrying once in %.0fs", result.error, query, self.transient_delay)
+            time.sleep(self.transient_delay)
+            try:
+                result = self._fetch(query)
+            except BudgetExceeded:
+                log.warning("SERP budget / cost cap used up before the retry for %r", query)
+                break
         for _ in range(self.incomplete_retries if retry_incomplete else 0):
             if result.status != STATUS_INCOMPLETE:
                 break

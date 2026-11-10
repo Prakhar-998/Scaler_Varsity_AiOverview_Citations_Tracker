@@ -36,7 +36,8 @@ class FakeSession:
 
 def make(responses, **kw):
     session = FakeSession(responses)
-    return DataForSeoProvider("login", "pw", session=session, backoff=0, incomplete_delay=0, **kw), session
+    return DataForSeoProvider("login", "pw", session=session, backoff=0, incomplete_delay=0,
+                              transient_delay=0, **kw), session
 
 
 MOBILE = "dataforseo/aio_fde_salary_india_mobile.json"
@@ -168,3 +169,38 @@ def test_get_provider_reads_credentials_from_env(monkeypatch):
     monkeypatch.setenv("DATAFORSEO_PASSWORD", "pw")
     provider = get_provider("dataforseo")
     assert isinstance(provider, DataForSeoProvider) and provider.auth == ("me", "pw")
+
+
+def task_error(load_fixture, code, message):
+    body = copy.deepcopy(load_fixture(AIO))
+    body["tasks"][0].update(status_code=code, status_message=message, result=None)
+    return body
+
+
+@pytest.mark.parametrize("code", [40101, 50000])
+def test_transient_task_error_retried_once_and_counted(load_fixture, code, caplog):
+    budget = CallBudget(10)
+    provider, session = make([FakeResponse(body=task_error(load_fixture, code, "Internal SE Server Error.")),
+                              FakeResponse(body=load_fixture(AIO))], budget=budget)
+    assert provider.fetch_ai_overview("q").status == STATUS_OK
+    assert len(session.calls) == 2 and budget.used == 2  # the retry is a billed call
+    assert f"task status: {code}" in caplog.text and "retrying once" in caplog.text
+
+
+def test_transient_error_retried_only_once(load_fixture):
+    err = task_error(load_fixture, 40101, "Internal SE Server Error.")
+    provider, session = make([FakeResponse(body=err), FakeResponse(body=copy.deepcopy(err))])
+    result = provider.fetch_ai_overview("q", retry_incomplete=False)  # select probes retry transient errors too
+    assert result.status == STATUS_FAILED and "40101" in result.error and len(session.calls) == 2
+
+
+def test_permanent_task_error_not_retried(load_fixture):
+    provider, session = make([FakeResponse(body=task_error(load_fixture, 40501, "Invalid Field."))])
+    assert provider.fetch_ai_overview("q").status == STATUS_FAILED and len(session.calls) == 1
+
+
+def test_no_retry_when_the_budget_is_used_up(load_fixture):
+    budget = CallBudget(1)
+    provider, session = make([FakeResponse(body=task_error(load_fixture, 40101, "Internal SE Server Error."))],
+                             budget=budget)
+    assert provider.fetch_ai_overview("q").status == STATUS_FAILED and len(session.calls) == 1
