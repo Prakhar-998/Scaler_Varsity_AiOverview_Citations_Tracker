@@ -249,3 +249,37 @@ desktop:
   rank of 6.
 - Billed $0.012 against a $0.02 estimate. The estimate is an upper bound.
 - `runs/active_prompts.json` was unchanged.
+
+## A static dashboard, generated from the run outputs
+**What:** `python -m tracker report` writes one HTML file with the data embedded. There is no
+server, no build step, and no network calls: plain SVG charts, no chart library from a CDN.
+- **Why static:** it's a prototype demo. One file opens anywhere, can be attached or shared, and
+  can't break because a CDN or an API is down. Re-running `report` after each `check` is the
+  refresh.
+- **Why it reads CSVs, not Sheets:** Sheets aren't set up yet, and every run already writes
+  CSVs under `runs/`. The builder takes plain rows, so reading the Sheets tabs later is a new
+  loader, not a new dashboard.
+
+**Definitions:** the same as the Summary tab. Failed checks are left out of every rate, and
+incomplete AI Overviews count toward presence but not the citation rate. Gaps and wins use the
+*latest* check per prompt and device, so one bad run doesn't hide a win, and a failed check never
+hides the last good result. Headline rates use all checks.
+
+**Gap priority:** buying intent first (fees > best > comparison/worth > audience > course >
+salary), then GSC impressions. A high-intent query with little demand is still nearer a sale
+than a high-demand salary query. Each gap names the Varsity blog to improve: the blog it was
+drafted from, otherwise the closest title or primary-keyword match in the same cluster
+(rapidfuzz `token_set_ratio` ≥ 60), otherwise "no matching blog: new content?".
+
+**Cost:** check rows don't record the provider, so cost comes from `runs/cost_log.csv`. Every run
+appends a row, and DataForSEO's per-call `cost` field gives the billed amount. Runs from before
+the log are listed with their logged estimate and shown as "estimated" on the dashboard.
+
+**Data safety:** the real dashboard embeds GSC queries and results, so `dashboard/` is
+gitignored. `report --sample` builds a fake dataset (`.example` competitor domains) through the
+same builder, for portfolio screenshots.
+
+**Known limit:** test runs (`check --prompts data/private/test_prompts.csv`) land in `runs/` like
+real ones, so they are mixed into the headline rates and the trend. If that matters, keep test
+runs in a separate `--runs` folder, or delete their `runs/dry-run-*` directories before
+`report`.

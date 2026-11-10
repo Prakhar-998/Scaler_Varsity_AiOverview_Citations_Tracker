@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- `report` command: a self-contained static dashboard at `dashboard/index.html`. It has headline
+  KPIs, per-cluster rates, gaps (sorted by intent and impressions, mapped to a Varsity blog),
+  wins, top competing domains, a sortable and filterable all-prompts table, and a per-date trend.
+  It uses plain SVG and makes no network calls, in light and dark mode. `report --sample` renders
+  fake data for screenshots.
+- `runs/cost_log.csv`: one row per `check` / `probe` / `select` run, with the estimated and billed
+  USD (DataForSEO reports each call's cost).
 - `select` writes drafted LLM candidates to `runs/<run>/candidates.csv` per blog as they are
   drafted, before any probe SERP call.
 - `select --prompts <csv>` loads candidates from a file (`prompt`, `cluster`; optional `source`,

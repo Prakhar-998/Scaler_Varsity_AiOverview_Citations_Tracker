@@ -141,6 +141,40 @@ Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to 
 `--max-serp-calls` caps SERP calls per run (default in `config/settings.yaml`; retries count).
 `check --max-cost <usd>` exits with code 3 before any SERP call if the estimate is over the limit.
 
+## Dashboard
+
+```bash
+.venv/bin/python -m tracker report            # dashboard/index.html from runs/
+.venv/bin/python -m tracker report --sample   # dashboard/sample.html, fake data for screenshots
+```
+
+`report` reads the latest `prompts.csv`, every `checks.csv` under `runs/`, `runs/cost_log.csv`,
+and `data/private/blogs.csv` (to map gaps to a blog). It writes **one self-contained HTML file**:
+the data is embedded, the charts are plain SVG, and it makes no network calls. Open it in a
+browser, and re-run `report` after each `check` to refresh it. Light and dark mode follow the
+OS, with a toggle.
+
+Sections:
+1. **Headline numbers:** prompts tracked, checks run, AI Overview presence %, Varsity citation
+   rate %, incomplete rate %, last check, and DataForSEO cost so far. Cost is the billed amount
+   where a run logged it, otherwise the run's estimate.
+2. **By cluster:** AI Overview presence and citation rate per cluster.
+3. **Gaps (the action list):** an AI Overview with sources that doesn't cite Varsity, using the
+   latest check per prompt and device. Sorted by buying intent, then GSC impressions. Each row
+   shows who is cited instead, our organic rank, and the Varsity blog to improve (the blog the
+   prompt was drafted from, or the closest title/keyword match in the cluster).
+4. **Wins:** Varsity cited, with URL and position.
+5. **Top competing domains:** the share of the latest AI Overviews that cite each domain.
+6. **All prompts:** sortable, filterable by cluster, device and status.
+7. **Trend:** citation rate per run date. It shows "needs 2+ runs" until there are two dates.
+
+`dashboard/` is gitignored, because the real dashboard embeds GSC queries and results. Only
+the generator (`tracker/report/`) is committed. The `--sample` data is invented: its competitor
+domains use the reserved `.example` TLD.
+
+Every `check`, `probe` and `select` run appends a row to `runs/cost_log.csv` (provider, devices,
+checks, SERP calls, estimated and billed USD). DataForSEO reports what it billed for each call.
+
 ## Scheduled daily run
 
 `scripts/daily_run.sh` runs `select --source both` (SERPHouse probes) and then, only if at least
@@ -247,6 +281,7 @@ tracker/match/    URL normalisation, Varsity / brand / competitor matching
 tracker/prompts/  Gemini drafting, filtering, scoring, dedupe
 tracker/output/   row building, summary, Sheets and CSV writers
 tracker/config/   YAML + CSV loaders
+tracker/report/   dashboard data builder, HTML template, sample data
 config/           programs.yaml (clusters), settings.yaml
 docs/decisions.md key choices and why
 ```
