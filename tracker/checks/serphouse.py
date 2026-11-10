@@ -55,7 +55,7 @@ class SerphouseProvider(SerpProvider):
         device: str = "mobile",
         session: Optional[requests.Session] = None,
         retries: int = 2,
-        timeout: float = 60.0,
+        timeout: float = 30.0,  # per attempt, so a bad network can't hang select
         backoff: float = 2.0,
         incomplete_retries: int = 1,
         incomplete_delay: float = 5.0,
@@ -100,6 +100,7 @@ class SerphouseProvider(SerpProvider):
                 resp = self.session.post(ENDPOINT, json=payload, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
                 last_error = f"request error: {exc}"
+                log.warning("SERPHouse attempt %d/%d for %r: %s", attempt + 1, self.retries + 1, query, last_error)
             else:
                 if resp.status_code == 200:
                     try:
@@ -108,6 +109,8 @@ class SerphouseProvider(SerpProvider):
                         return SerpResult.failed(query, "response was not JSON")
                     return parse_response(query, body)
                 last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                log.warning("SERPHouse attempt %d/%d for %r: HTTP %d", attempt + 1, self.retries + 1, query,
+                            resp.status_code)
                 if resp.status_code < 500 and resp.status_code != 429:
                     break  # client error: retrying won't help
             if attempt < self.retries:

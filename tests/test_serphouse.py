@@ -25,7 +25,7 @@ class FakeSession:
         self.calls = []
 
     def post(self, url, json=None, headers=None, timeout=None):
-        self.calls.append({"url": url, "json": json, "headers": headers})
+        self.calls.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
         item = self.responses.pop(0)
         if isinstance(item, Exception):
             raise item
@@ -195,3 +195,13 @@ def test_registry(monkeypatch):
     assert get_provider().name == "fake"
     with pytest.raises(ValueError):
         get_provider("nope")
+
+
+def test_every_request_has_a_timeout_and_failed_attempts_are_logged(caplog):
+    import requests
+
+    p, session = make([requests.ConnectTimeout("slow"), requests.ConnectTimeout("slow"),
+                       requests.ConnectTimeout("slow")])
+    r = p.fetch_ai_overview("q")
+    assert r.status == "failed" and [c["timeout"] for c in session.calls] == [30.0] * 3
+    assert "SERPHouse attempt 1/3 for 'q'" in caplog.text and "attempt 3/3" in caplog.text
