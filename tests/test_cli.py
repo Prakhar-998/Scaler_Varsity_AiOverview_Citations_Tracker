@@ -417,3 +417,36 @@ def test_select_prompts_no_probe_keeps_the_curated_file(tmp_path, monkeypatch):
         "best generative ai course in india", "what is a forward deployed engineer"]
     rows = list(csv.DictReader(open(next(tmp_path.glob("dry-run-*")) / "prompts.csv")))
     assert {r["reason"] for r in rows} == {"curated, not probed"}
+
+
+def test_max_cost_caps_retries_and_the_cost_log_counts_them(tmp_path, monkeypatch, caplog):
+    from tracker.checks.base import BudgetExceeded, SerpProvider
+
+    class Retrying(SerpProvider):  # every check fails transiently once, then retries (2 billed calls)
+        name, device, spent_usd = "fake", "desktop", None
+
+        def __init__(self, budget):
+            self.budget = budget
+
+        def fetch_ai_overview(self, query, retry_incomplete=True):
+            self.budget.spend()
+            try:
+                self.budget.spend()
+            except BudgetExceeded:
+                return SerpResult.failed(query, "task status: 40101 Internal SE Server Error.")
+            return SerpResult(query, STATUS_NO_AIO)
+
+    monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"],
+                                                      "cost_per_check_usd": {"fake": 0.004}})
+    monkeypatch.setattr(cli, "make_provider", lambda args, settings, budget, device: Retrying(budget))
+    monkeypatch.setattr(cli, "RUNS", tmp_path)
+    monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
+    (tmp_path / "active.json").write_text(json.dumps([{"prompt": "a", "cluster": "fde"},
+                                                      {"prompt": "b", "cluster": "fde"}]))
+    import logging
+
+    caplog.set_level(logging.INFO, logger="tracker")
+    assert cli.main(["check", "--dry-run", "--max-cost", "0.012"]) == 0  # $0.008 planned, room for 1 retry
+    assert "allows 3 SERP calls: 2 checks + up to 1 retries" in caplog.text
+    row = list(csv.DictReader(open(tmp_path / "cost_log.csv")))[0]
+    assert (row["checks"], row["serp calls"], row["estimated usd"]) == ("2", "3", "0.0120")  # never over the cap

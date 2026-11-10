@@ -250,14 +250,22 @@ def cmd_check(args, settings) -> int:
     devices = resolve_devices(args, settings)
     budget = CallBudget(args.max_serp_calls or int(settings["max_serp_calls"]))
     planned = len(prompts) * len(devices)
-    if planned > budget.max_calls:
-        log.warning("%d checks (%d prompts x %d devices) but budget is %d calls; later checks will be skipped",
-                    planned, len(prompts), len(devices), budget.max_calls)
     providers = [make_provider(args, settings, budget, d) for d in devices]
+    rate = (settings.get("cost_per_check_usd") or {}).get(providers[0].name)
     cost = log_cost_estimate(providers[0].name, planned, settings)
     if args.max_cost is not None and cost is not None and cost > args.max_cost:
         log.error("estimated cost $%.2f is over --max-cost $%.2f; no checks run", cost, args.max_cost)
         return 3
+    if args.max_cost is not None and rate:
+        # retries are billed calls too: the cap becomes a call limit, so they can never push spend past it
+        cap_calls = int(args.max_cost / float(rate) + 1e-9)
+        if cap_calls < budget.max_calls:
+            budget.max_calls = cap_calls
+            log.info("--max-cost $%.2f allows %d SERP calls: %d checks + up to %d retries",
+                     args.max_cost, cap_calls, planned, max(cap_calls - planned, 0))
+    if planned > budget.max_calls:
+        log.warning("%d checks (%d prompts x %d devices) but budget is %d calls; later checks will be skipped",
+                    planned, len(prompts), len(devices), budget.max_calls)
     now = datetime.now()
     stamp = now.strftime("%Y%m%d-%H%M%S")
     raw_dir = None
@@ -277,7 +285,8 @@ def cmd_check(args, settings) -> int:
     col = CHECK_HEADERS.index("check status")
     counts = {s: sum(r[col] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
     log.info("%d checks %s; %d SERP calls used", len(rows), counts, budget.used)
-    record_cost("check", providers, len(rows), budget.used, cost)
+    # the logged estimate covers every call made, retries included
+    record_cost("check", providers, len(rows), budget.used, None if rate is None else float(rate) * budget.used)
     return 0
 
 
