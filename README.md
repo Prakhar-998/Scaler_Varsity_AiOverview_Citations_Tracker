@@ -67,6 +67,8 @@ Both adapters fetch google.com, India, English, for the configured device, and r
 - **dataforseo** (default for `check` and `probe`): `POST /v3/serp/google/organic/live/advanced`
   with `location_code` 2356 and `load_async_ai_overview: true`, which returns complete AI Overviews.
   About $0.004 per call; `check` logs the estimated cost (checks × rate) before it starts.
+  A task that fails with a transient status (40101 "Internal SE Server Error", or a 5xxxx
+  internal error) is retried once after 5s; the retry is a billed call.
 - **serphouse** (default for `select` probes): `POST /serp/live`. For most commercial queries it
   returns the AI Overview without its sources (`incomplete`): 15 of 15 in one `select` run. That is
   enough for a probe, which only asks whether an AI Overview is shown.
@@ -151,6 +153,9 @@ before any probe SERP call. If a run stops, re-use them without drafting again:
 Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to `runs/dry-run-*/`.
 `--max-serp-calls` caps SERP calls per run (default in `config/settings.yaml`; retries count).
 `check --max-cost <usd>` exits with code 3 before any SERP call if the estimate is over the limit.
+Otherwise it becomes a hard cap that includes retries: $0.40 at $0.004 per call allows 100 calls,
+so 50 checks leave room for 50 retries. If retries use up the cap, the remaining checks are
+skipped with a warning. The cost log's estimate counts every call made, retries included.
 
 ## Dashboard
 

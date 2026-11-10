@@ -333,3 +333,20 @@ probed candidates fill the rest by score. With probing on, file prompts are filt
 
 **SERPHouse timeout:** 30s per attempt, up to 3 attempts, each failure logged. The worst case per
 probe is about 1.5 minutes with a warning every 30s, not minutes of silence.
+
+## Retry transient DataForSEO task errors; --max-cost includes retries (2026-11-11)
+
+DataForSEO answered 5 of 37 checks on 2026-11-10 with HTTP 200 but task status 40101 "Internal SE
+Server Error". The HTTP-level retry didn't see it, because the request itself succeeded, so each one
+became a `failed` check. These are Google-side fetch errors, not bad input, so the adapter now
+retries a task once after 5s when its status is 40101 or a 5xxxx internal error. Other 4xxxx codes
+(invalid field, auth, balance) won't change on a retry and fail at once. One retry, not more:
+a second 40101 for the same query in the same minute is likely to repeat, and each retry is billed.
+The retry also applies to `probe` and to DataForSEO select probes, since a failed probe loses the
+candidate just the same.
+
+**Cost cap:** retries are billed, so `--max-cost` counts them. Before the run it still compares
+the planned checks with the cap (exit 3 if over). Then it caps SERP calls at cap ÷ rate, so retries
+and the late-load retry draw from the same pool, and spend can never pass the cap. If they use it
+up, the remaining checks are skipped with a warning rather than overspending. The cost log's
+estimate is now calls made × rate, retries included.

@@ -76,6 +76,8 @@
 - Offline test suite.
 
 ### Changed
+- `check --max-cost` is a hard cap that includes retries (it limits SERP calls to cap ÷ rate), and
+  the cost log's estimate counts every call made instead of the planned checks.
 - `select --prompts <csv> --no-probe` keeps every prompt from the file (reason "curated, not
   probed") instead of dropping those with no GSC match; dedupe and intent grouping still apply.
 - `select` logs each probe as `probe n/total: <prompt>`.
@@ -102,6 +104,8 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- DataForSEO tasks that fail with a transient status (40101 "Internal SE Server Error", 5xxxx) are
+  retried once after 5s instead of being recorded as failed (5 of 37 checks on 2026-11-10).
 - SERPHouse requests time out after 30s per attempt (was 60s) and each failed attempt is logged,
   so a bad network no longer hangs `select` silently.
 - DataForSEO organic results: `url` is a `google.com/goto` redirect on both devices, so the site now
