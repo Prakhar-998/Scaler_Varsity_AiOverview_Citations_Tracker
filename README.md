@@ -178,9 +178,14 @@ OS, with a toggle.
 Sections:
 1. **Headline numbers:** prompts tracked, checks run, AI Overview presence %, **Varsity blog
    cited** % (a /varsity/blog/ page), **Varsity / InterviewBit cited — any page** % (the blog,
-   program pages or any other interviewbit.com / scaler.com page), incomplete rate %, last check,
+   program pages or any other interviewbit.com / scaler.com page, split into blog, other
+   InterviewBit and Scaler), incomplete rate %, last check,
    and DataForSEO cost so far. Cost covers every run: the
    billed amount where a run logged it, otherwise the run's estimate.
+   **Wins scoreboard**, right below, headed "Cited for X of N tracked prompts": every active
+   prompt one of our pages was cited for in any run, with the page, best position, cited in X of
+   Y runs (a run counts when it got an answer: ok or no AI Overview), last cited, and a "lost in
+   latest run" tag. Most consistent first, then best position.
 2. **By cluster:** AI Overview presence and both citation rates per cluster.
 3. **Gaps (the action list):** an AI Overview with sources that doesn't cite Varsity, using the
    latest check per prompt and device. Sorted by buying intent, then GSC impressions. Each row
@@ -188,13 +193,12 @@ Sections:
    prompt was drafted from, or the closest title/keyword match in the cluster). Organic rank is
    the best Varsity result in the top 10, or "not in top 10". On desktop it's a domain-level
    match (any interviewbit.com result), because the organic links are opaque Google redirects.
-4. **Wins:** Varsity cited, with URL and position.
-   **By blog:** each Varsity page cited, the prompts citing it and its best position; then the
+4. **By blog:** each Varsity page cited, the prompts citing it and its best position; then the
    blogs tracked prompts map to that were never cited.
 5. **Top competing domains:** the share of the latest AI Overviews that cite each domain.
 6. **All prompts:** sortable, filterable by cluster, device and status. Shows blog cited, any page
    cited, the cited URL and its page type: blog, program page (URL path has course, program or
-   academy) or other page.
+   academy) or other page, with the site (InterviewBit or Scaler), and cited in X of Y runs.
 7. **Trend:** blog citation rate per check run (one point per run timestamp), over the prompts that
    run checked. It shows "needs 2+
    check runs" until there are two.

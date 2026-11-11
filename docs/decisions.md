@@ -370,3 +370,26 @@ win for the business. Checks now record the first such page and its position (`b
 `brand position`). Page type is a heuristic: "program page" when the URL path contains course,
 program or academy, otherwise "other page", and the URL is always shown next to it. Checks from
 before this change know a brand page was cited but not which, shown as "page not recorded".
+
+## Wins scoreboard over every run; prompts matched by normalised text (2026-11-11)
+
+**Normalised matching.** History was matched to active prompts by exact text (only trimmed and
+lowercased). The pilot run checked "help me evaluate the best online learning paths for forward
+deployed engineering." with a full stop; the active prompt has none, so its #9 learning-path blog
+citation was dropped. Matching now lowercases, trims, collapses spaces and strips trailing
+punctuation (`. , ; : ! ? …`); checks take the active spelling so every section groups them as one
+prompt. Plural or reworded prompts stay separate on purpose: that's intent grouping's job at
+selection, not history's. Effect on today's data: one check changed, blog cited 4 → 5 of 123.
+
+**Scoreboard, not latest check.** A latest-check-only Wins list hides consistency: a prompt cited
+in 3 of 4 runs and one cited once look the same, and a citation lost in the latest run simply
+disappears. The scoreboard keeps one row per prompt cited in any run, sorted by share of runs
+cited, then best position, and tags "lost in latest run". A win is any of our pages (blog, other
+InterviewBit, Scaler), matching the any-page KPI; the blog-only count is in the note. Y counts runs
+that got an answer (ok or no AI Overview): failed and incomplete checks say nothing about
+citations. Devices are folded per run: a run is cited if any device was.
+
+**InterviewBit vs Scaler.** The any-page rate mixes three different owners (blog team, InterviewBit
+pages, Scaler pages), so the KPI note and cluster tooltip split it. Only the first brand page per
+check is recorded, so a check citing both the blog and a Scaler page counts as blog.
+

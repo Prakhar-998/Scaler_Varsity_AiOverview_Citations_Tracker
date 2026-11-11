@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Added
+- Dashboard: a **wins scoreboard** right after the KPIs, headed "Cited for X of N tracked
+  prompts": one row per active prompt any of our pages was cited for in any run, with the page,
+  best position, cited in X of Y runs, last cited, and a "lost in latest run" tag. It replaces the
+  latest-check-only Wins section; the prompts table gains the same "cited in" column.
+- Dashboard: any-page citations split into Varsity blog, other InterviewBit and Scaler (KPI note,
+  cluster tooltip), and page types name the site ("Scaler program page").
 - Checks record the first other InterviewBit/Scaler page cited (`brand url`, `brand position`),
   and the Summary has an `any page citation rate %`.
 - Dashboard: a second citation KPI, "Varsity / InterviewBit cited — any page", in the KPIs, the
@@ -112,6 +118,8 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- Dashboard: past checks match active prompts by normalised text (case, spaces, trailing
+  punctuation), so the pilot run's "...forward deployed engineering." check now counts.
 - DataForSEO tasks that fail with a transient status (40101 "Internal SE Server Error", 5xxxx) are
   retried once after 5s instead of being recorded as failed (5 of 37 checks on 2026-11-10).
 - SERPHouse requests time out after 30s per attempt (was 60s) and each failed attempt is logged,
