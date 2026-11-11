@@ -46,6 +46,14 @@ def page_kind(url: str) -> str:
     return PAGE_PROGRAM if any(w in path for w in PROGRAM_PATH_WORDS) else PAGE_OTHER
 
 
+def brand_site(url: str) -> str:
+    """InterviewBit (the Varsity blog included) or Scaler, for one of our URLs; "" otherwise."""
+    d = domain_of(url) if url else ""
+    if _on_domain(d, "interviewbit.com"):
+        return "InterviewBit"
+    return "Scaler" if _on_domain(d, "scaler.com") else ""
+
+
 @dataclass
 class CitationMatch:
     varsity_cited: bool = False

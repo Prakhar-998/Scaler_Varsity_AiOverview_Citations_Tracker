@@ -147,6 +147,14 @@ def test_page_kind():
     assert page_kind("https://fde.academy/") == "" and page_kind("") == ""
 
 
+def test_brand_site():
+    from tracker.match import brand_site
+
+    assert brand_site("https://www.interviewbit.com/varsity/blog/x/") == "InterviewBit"
+    assert brand_site("https://www.scaler.com/academy/fde-program/") == "Scaler"
+    assert brand_site("https://fde.academy/") == "" and brand_site("") == ""
+
+
 def test_brand_position_is_the_first_brand_reference():
     r = SerpResult("q", "ok", shown=True, references=[
         Reference("https://a.com/x", position=1), Reference("https://www.scaler.com/academy/x", position=2),

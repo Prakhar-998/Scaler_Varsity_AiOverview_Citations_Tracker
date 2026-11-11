@@ -163,10 +163,12 @@ def test_blog_and_any_page_citation_rates_and_cited_page():
     k = r["kpis"]
     assert (k["citation_rate"], k["any_rate"], k["any_cited"]) == (25.0, 75.0, 3)
     assert r["clusters"][0]["any_rate"] == 75.0
+    assert k["any_split"] == {"blog": 1, "interviewbit": 0, "scaler": 1, "not_recorded": 1}
     rows = {p["prompt"]: p for p in r["prompts"]}
     assert (rows["a"]["any"], rows["a"]["cited_kind"], rows["a"]["any_position"]) == ("yes", "blog", 2)
     assert (rows["b"]["cited_url"], rows["b"]["cited_kind"], rows["b"]["any_position"]) == (
         "https://www.scaler.com/academy/fde/", "program page", 3)
+    assert (rows["a"]["cited_site"], rows["b"]["cited_site"], rows["c"]["cited_site"]) == ("InterviewBit", "Scaler", "")
     assert rows["c"]["cited_kind"] == "page not recorded"   # brand cited before brand url was recorded
     assert (rows["d"]["any"], rows["d"]["cited_url"]) == ("no", "")
     gap = next(g for g in r["gaps"] if g["prompt"] == "b")

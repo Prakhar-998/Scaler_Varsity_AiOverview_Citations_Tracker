@@ -290,13 +290,19 @@ footer p { margin: 0 0 6px; }
     "Google India · AI Overviews · generated " + D.generated_at +
     (D.prompts_from ? " · prompts from " + D.prompts_from : "");
   var k = D.kpis;
+  // any-page citations by site: Varsity blog, other InterviewBit pages, Scaler pages
+  function splitText(sp) {
+    if (!sp) return "blog, program or other IB / Scaler page";
+    return sp.blog + " blog · " + sp.interviewbit + " other InterviewBit · " + sp.scaler + " Scaler" +
+      (sp.not_recorded ? " · " + sp.not_recorded + " page not recorded" : "");
+  }
+  function pageType(site, kind) { return site && kind && kind !== "page not recorded" ? site + " " + kind : kind; }
   var kpis = [
     ["Prompts tracked", dash(k.prompts_tracked), "active set" + (k.prompt_set ? " " + k.prompt_set : "")],
     ["Checks run", dash(k.checks), k.ok + " ok · " + k.incomplete + " incomplete · " + k.no_aio + " no AIO · " + k.failed + " failed"],
     ["AI Overview presence", pct(k.aio_presence), "of successful checks"],
     ["Varsity blog cited", pct(k.citation_rate), k.cited + " of " + k.ok + " AIOs with sources · /varsity/blog/"],
-    ["Varsity / InterviewBit cited \u2014 any page", pct(k.any_rate), k.any_cited + " of " + k.ok +
-      " · blog, program or other IB / Scaler page"],
+    ["Varsity / InterviewBit cited \u2014 any page", pct(k.any_rate), k.any_cited + " of " + k.ok + " · " + splitText(k.any_split)],
     ["Incomplete rate", pct(k.incomplete_rate), "AIOs whose sources didn't load"],
     ["Last check", k.last_check_at || "–", "local time", true],
     ["DataForSEO cost so far", k.cost_usd == null ? "–" : "$" + k.cost_usd.toFixed(3),
@@ -394,6 +400,7 @@ footer p { margin: 0 0 6px; }
           { label: "AI Overview presence", value: pct(c.aio_presence), color: "var(--s1)" },
           { label: "Varsity blog cited", value: pct(c.citation_rate) + " (" + c.cited + "/" + c.ok + ")", color: "var(--s2)" },
           { label: "Any page cited", value: pct(c.any_rate) + " (" + c.any_cited + "/" + c.ok + ")", color: "var(--s3)" },
+          { label: "Any page by site", value: splitText(c.any_split) },
           { label: "Checks", value: String(c.checks) }] };
       }),
       fmt: function (v) { return pct(v); }
@@ -439,7 +446,7 @@ footer p { margin: 0 0 6px; }
     { label: "Cited instead", cls: "domains", render: function (r) {
         if (!r.brand_cited) return domainsText(r.competitors);
         var span = el("span", null, domainsText(r.competitors));
-        var ours = el("div", { class: "muted" }, "our " + r.brand_kind + " cited" + (r.brand_position ? " (#" + r.brand_position + ")" : "") + ": ");
+        var ours = el("div", { class: "muted" }, "our " + pageType(r.brand_site, r.brand_kind) + " cited" + (r.brand_position ? " (#" + r.brand_position + ")" : "") + ": ");
         ours.appendChild(link(r.brand_url, shortUrl(r.brand_url) || "URL not recorded"));
         span.appendChild(ours); return span; } },
     { label: "Our organic rank*", render: function (r) { return rankText(r.organic_rank, r.rank_match, "ok"); } },
@@ -570,6 +577,7 @@ footer p { margin: 0 0 6px; }
     if (c.key === "organic_rank") return rankText(v, p.rank_match, p.status);
     if (c.key === "status") return el("span", { class: "pill " + v.replace(/\s/g, "-") }, LABELS[v] || v);
     if (c.key === "varsity" || c.key === "any") return v === "yes" ? el("span", { class: "pill yes" }, "✓ yes") : dash(v);
+    if (c.key === "cited_kind") return dash(pageType(p.cited_site, v));
     if (c.key === "cited_url") return v ? link(v, shortUrl(v) + (p.any_position ? " (#" + p.any_position + ")" : "")) : "–";
     return dash(v);
   }

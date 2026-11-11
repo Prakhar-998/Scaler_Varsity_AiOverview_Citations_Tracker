@@ -28,7 +28,7 @@ from typing import Dict, List, Optional
 from rapidfuzz import fuzz
 
 from tracker.config import Blog, Cluster
-from tracker.match import normalise_url, page_kind
+from tracker.match import brand_site, normalise_url, page_kind
 from tracker.prompts.generate import INTENT_PATTERNS, OTHER_INTENT_WEIGHT, classify_intent
 from tracker.prompts.prompt_file import prompt_set_id
 
@@ -96,10 +96,15 @@ def _rates(rows: List[Dict[str, str]]) -> Dict:
     cited = sum(1 for r in rows if r.get("check status") == "ok" and r.get("varsity cited") == "yes")
     brand = sum(1 for r in rows if r.get("check status") == "ok" and r.get("brand cited") == "yes")
     anyp = sum(1 for r in rows if r.get("check status") == "ok" and "yes" in (r.get("varsity cited"), r.get("brand cited")))
+    # any-page citations by site: the blog, else the brand page's site (blank before brand url was recorded)
+    sites = Counter(brand_site(r.get("brand url", "")) for r in rows
+                    if r.get("check status") == "ok" and r.get("varsity cited") != "yes" and r.get("brand cited") == "yes")
     return {"checks": len(rows), "ok": ok, "incomplete": inc, "no_aio": no_aio, "failed": c["failed"],
             "cited": cited, "aio_presence": _pct(ok + inc, ok + inc + no_aio),
             "citation_rate": _pct(cited, ok), "incomplete_rate": _pct(inc, ok + inc),
-            "brand_rate": _pct(brand, ok), "any_cited": anyp, "any_rate": _pct(anyp, ok)}
+            "brand_rate": _pct(brand, ok), "any_cited": anyp, "any_rate": _pct(anyp, ok),
+            "any_split": {"blog": cited, "interviewbit": sites["InterviewBit"], "scaler": sites["Scaler"],
+                          "not_recorded": sites[""]}}
 
 
 def _domains(row: Dict[str, str]) -> List[str]:
@@ -172,8 +177,9 @@ def _citation(row: Dict[str, str]) -> Dict:
     elif row.get("brand cited") == "yes":
         url, pos = row.get("brand url", ""), row.get("brand position")
     else:
-        return {"any": row.get("varsity cited", ""), "url": "", "position": None, "kind": ""}
-    return {"any": "yes", "url": url, "position": _int(pos), "kind": page_kind(url) or "page not recorded"}
+        return {"any": row.get("varsity cited", ""), "url": "", "position": None, "kind": "", "site": ""}
+    return {"any": "yes", "url": url, "position": _int(pos), "kind": page_kind(url) or "page not recorded",
+            "site": brand_site(url)}
 
 
 def _map_blog(prompt: str, cluster: str, named: str, blogs: List[Blog]) -> Dict[str, str]:
@@ -290,7 +296,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             c = _citation(r)
             gaps.append(dict(base, competitors=_domains(r), organic_rank=_int(r.get("organic rank")),
                              rank_match=r.get("rank match", ""), brand_cited=r.get("brand cited") == "yes",
-                             brand_url=c["url"], brand_kind=c["kind"], brand_position=c["position"],
+                             brand_url=c["url"], brand_kind=c["kind"], brand_site=c["site"], brand_position=c["position"],
                              blog_title=blog["title"], blog_url=blog["url"], blog_how=blog["how"],
                              _w=i["intent_weight"]))
     gaps.sort(key=lambda g: (-g["_w"], -g["impressions"], g["prompt"]))
@@ -310,7 +316,8 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
         table.append({"prompt": r["prompt"], "cluster": r.get("cluster", ""), "source": i["source"],
                       "brand_tag": i["brand_tag"], "aio": r.get("ai overview shown", ""),
                       "varsity": r.get("varsity cited", ""), "position": _int(r.get("position")),
-                      "any": c["any"], "cited_url": c["url"], "cited_kind": c["kind"], "any_position": c["position"],
+                      "any": c["any"], "cited_url": c["url"], "cited_kind": c["kind"], "cited_site": c["site"],
+                      "any_position": c["position"],
                       "competitors": _domains(r), "organic_rank": _int(r.get("organic rank")),
                       "rank_match": r.get("rank match", ""), "device": r.get("device", ""),
                       "status": r.get("check status", ""), "checked_at": _checked_at(r)})
@@ -320,7 +327,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             r = meta.get(p, {})
             table.append({"prompt": p, "cluster": r.get("cluster", ""), "source": r.get("source", ""),
                           "brand_tag": r.get("brand tag", ""), "aio": "", "varsity": "", "position": None,
-                          "any": "", "cited_url": "", "cited_kind": "", "any_position": None,
+                          "any": "", "cited_url": "", "cited_kind": "", "cited_site": "", "any_position": None,
                           "competitors": [], "organic_rank": None, "rank_match": "", "device": "",
                           "status": "not checked", "checked_at": ""})
 
