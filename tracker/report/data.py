@@ -182,6 +182,49 @@ def _citation(row: Dict[str, str]) -> Dict:
             "site": brand_site(url)}
 
 
+def _history(checks: List[Dict[str, str]]) -> Dict[str, Dict]:
+    """Per prompt, over the runs that got an answer for it (ok or no AI Overview; failed and incomplete
+    checks say nothing about citations): runs counted, runs where one of our pages was cited (any device),
+    the pages, best position, last cited, and whether the latest run lost the citation."""
+    runs: Dict[str, Dict[str, bool]] = defaultdict(dict)
+    pages: Dict[str, Dict[str, Dict]] = defaultdict(dict)
+    best: Dict[str, Optional[int]] = {}
+    for r in sorted(checks, key=_checked_at):
+        if r.get("check status") not in ("ok", "no_aio"):
+            continue
+        p, at, c = r["prompt"], _checked_at(r), _citation(r)
+        hit = r.get("check status") == "ok" and c["any"] == "yes"
+        runs[p][at] = runs[p].get(at, False) or hit
+        if not hit:
+            continue
+        key = normalise_url(c["url"]) if c["url"] else ""
+        e = pages[p].setdefault(key, {"url": c["url"], "kind": c["kind"], "site": c["site"], "runs": set()})
+        e["runs"].add(at)
+        if c["position"] is not None and (best.get(p) is None or c["position"] < best[p]):
+            best[p] = c["position"]
+    out = {}
+    for p, by_run in runs.items():
+        cited = sorted(at for at, hit in by_run.items() if hit)
+        latest = max(by_run)
+        blog_runs = {at for e in pages[p].values() if e["kind"] == "blog" for at in e["runs"]}
+        # a brand citation from before brand url was recorded adds nothing once a URL is known
+        known = [e for e in pages[p].values() if e["url"]] or list(pages[p].values())
+        out[p] = {"runs": len(by_run), "cited_runs": len(cited), "blog_runs": len(blog_runs),
+                  "last_cited": cited[-1] if cited else "", "lost": bool(cited) and not by_run[latest],
+                  "best_position": best.get(p),
+                  # most recently cited page first
+                  "pages": [{k: v for k, v in e.items() if k != "runs"} for e in
+                            sorted(known, key=lambda e: max(e["runs"]), reverse=True)]}
+    return out
+
+
+def _scoreboard(history: Dict[str, Dict], cluster_of: Dict[str, str]) -> List[Dict]:
+    """Every active prompt one of our pages was cited for in any run, most consistent first, then best position."""
+    rows = [dict(h, prompt=p, cluster=cluster_of.get(p, "")) for p, h in history.items() if h["cited_runs"]]
+    rows.sort(key=lambda w: (-w["cited_runs"] / w["runs"], -w["cited_runs"], w["best_position"] or 99, w["prompt"]))
+    return rows
+
+
 def _map_blog(prompt: str, cluster: str, named: str, blogs: List[Blog]) -> Dict[str, str]:
     """The Varsity blog a prompt belongs to: the drafting blog if known, else the closest title or
     primary keyword in the same cluster."""
@@ -235,6 +278,11 @@ def _by_blog(checks: List[Dict[str, str]], prompts: Dict[str, str], named: Dict[
     return {"cited": rows, "never_cited": uncited}
 
 
+def _runs_cited(h: Optional[Dict]) -> Dict:
+    h = h or {}
+    return {"cited_runs": h.get("cited_runs", 0), "runs": h.get("runs", 0), "lost": h.get("lost", False)}
+
+
 def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                  generated_at: Optional[datetime] = None, sample: bool = False) -> Dict:
     names = {c.key: c.name for c in clusters}
@@ -283,15 +331,13 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                     for k, rows in sorted(by_cluster.items(), key=lambda kv: list(names).index(kv[0])
                                           if kv[0] in names else 99)]
 
-    # 3/4. gaps and wins, from the latest check per prompt and device
-    gaps, wins = [], []
+    # 3. gaps, from the latest check per prompt and device
+    gaps = []
     for r in latest:
         p, i = r["prompt"], info(r["prompt"])
         base = {"prompt": p, "cluster": r.get("cluster", ""), "device": r.get("device", ""),
                 "checked_at": _checked_at(r), "intent": i["intent"], "impressions": i["impressions"]}
-        if r.get("check status") == "ok" and r.get("varsity cited") == "yes":
-            wins.append(dict(base, cited_url=r.get("cited url", ""), position=_int(r.get("position"))))
-        elif r.get("check status") == "ok":
+        if r.get("check status") == "ok" and r.get("varsity cited") != "yes":
             blog = _map_blog(p, r.get("cluster", ""), i["blog"], blogs)
             c = _citation(r)
             gaps.append(dict(base, competitors=_domains(r), organic_rank=_int(r.get("organic rank")),
@@ -302,7 +348,10 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
     gaps.sort(key=lambda g: (-g["_w"], -g["impressions"], g["prompt"]))
     for g in gaps:
         g.pop("_w")
-    wins.sort(key=lambda w: (w["position"] or 99, w["prompt"]))
+
+    # 4. wins scoreboard: every run, per prompt
+    history = _history(checks)
+    wins = _scoreboard(history, {r["prompt"]: r.get("cluster", "") for r in checks})
 
     # 5. competing domains, share of AI Overviews with sources (latest per prompt and device)
     with_sources = [r for r in latest if r.get("check status") == "ok"]
@@ -320,7 +369,8 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                       "any_position": c["position"],
                       "competitors": _domains(r), "organic_rank": _int(r.get("organic rank")),
                       "rank_match": r.get("rank match", ""), "device": r.get("device", ""),
-                      "status": r.get("check status", ""), "checked_at": _checked_at(r)})
+                      "status": r.get("check status", ""), "checked_at": _checked_at(r),
+                      **_runs_cited(history.get(r["prompt"]))})
     checked = {r["prompt"] for r in latest}
     for p in active:
         if p not in checked:
@@ -329,7 +379,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                           "brand_tag": r.get("brand tag", ""), "aio": "", "varsity": "", "position": None,
                           "any": "", "cited_url": "", "cited_kind": "", "cited_site": "", "any_position": None,
                           "competitors": [], "organic_rank": None, "rank_match": "", "device": "",
-                          "status": "not checked", "checked_at": ""})
+                          "status": "not checked", "checked_at": "", **_runs_cited(None)})
 
     # 7. trend: citation rate per check run (one timestamp per run, all devices), over the prompts that run checked
     by_run = defaultdict(list)
@@ -347,7 +397,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
     return {"title": "Varsity AI Overview Citation Tracker", "sample": sample, "by_blog": by_blog,
             "generated_at": (generated_at or datetime.now()).strftime("%Y-%m-%d %H:%M"),
             "prompts_from": inputs.prompts_from, "kpis": kpis, "clusters": cluster_rows, "gaps": gaps,
-            "wins": wins, "domains": domains, "aio_with_sources": len(with_sources), "prompts": table,
+            "wins": wins, "wins_blog": sum(1 for w in wins if w["blog_runs"]), "domains": domains, "aio_with_sources": len(with_sources), "prompts": table,
             "trend": trend, "other_runs": other_runs}
 
 

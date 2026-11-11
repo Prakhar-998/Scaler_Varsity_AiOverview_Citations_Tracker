@@ -122,6 +122,7 @@ a:hover { text-decoration: underline; }
 .pill.ok, .pill.yes { background: var(--good-wash); color: var(--good); }
 .pill.incomplete { background: var(--warn-wash); color: var(--warn); }
 .pill.failed { background: var(--bad-wash); color: var(--bad); }
+.pill.lost { background: var(--warn-wash); color: var(--warn); margin-left: 6px; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .filters input { flex: 1 1 200px; min-width: 160px; }
 .filters label { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
@@ -151,6 +152,12 @@ footer p { margin: 0 0 6px; }
   <div class="kpis" id="kpis" aria-label="Headline numbers"></div>
   <details class="other-runs" id="other-runs" hidden></details>
 
+  <section aria-labelledby="h-wins">
+    <div class="sec-head"><div><h2 id="h-wins">Wins scoreboard</h2>
+      <p id="wins-note"></p></div><span class="count" id="wins-count"></span></div>
+    <div id="wins"></div>
+  </section>
+
   <section aria-labelledby="h-cluster">
     <div class="sec-head"><div><h2 id="h-cluster">By cluster</h2>
       <p>AI Overview presence, and the Varsity blog and any-page citation rates (of AI Overviews with sources), all checks of the active prompts (from every real run).</p></div></div>
@@ -163,12 +170,6 @@ footer p { margin: 0 0 6px; }
       <p>The action list. Latest check per prompt and device, highest buying intent and GSC impressions first.</p></div>
       <span class="count" id="gaps-count"></span></div>
     <div id="gaps"></div>
-  </section>
-
-  <section aria-labelledby="h-wins">
-    <div class="sec-head"><div><h2 id="h-wins">Wins: Varsity cited</h2>
-      <p>Latest check per prompt and device.</p></div><span class="count" id="wins-count"></span></div>
-    <div id="wins"></div>
   </section>
 
   <section aria-labelledby="h-blogs">
@@ -469,17 +470,32 @@ footer p { margin: 0 0 6px; }
   }
   drawGaps();
 
-  // ---------- 4. wins ----------
-  document.getElementById("wins-count").textContent = D.wins.length + " prompts";
+  // ---------- 4. wins scoreboard ----------
+  // every run of the active prompts: a run that got an answer (ok or no AI Overview) counts; a win is one
+  // of our pages (Varsity blog, other InterviewBit, Scaler) cited in it
+  function lostTag() { return el("span", { class: "pill lost", title: "cited in an earlier run, not in the latest" },
+    "lost in latest run"); }
+  document.getElementById("h-wins").textContent = "Cited for " + D.wins.length + " of " + k.prompts_tracked + " tracked prompts";
+  document.getElementById("wins-note").textContent = "Wins scoreboard: every prompt one of our pages was cited for in any run, " +
+    D.wins_blog + " of them by the Varsity blog. A run counts when it got an answer (ok or no AI Overview); " +
+    "most consistent first, then best position.";
+  document.getElementById("wins-count").textContent = D.wins.filter(function (w) { return w.lost; }).length + " lost in latest run";
   var winsHost = document.getElementById("wins");
-  if (!D.wins.length) winsHost.appendChild(empty("No Varsity citations yet."));
+  if (!D.wins.length) winsHost.appendChild(empty("No Varsity / InterviewBit / Scaler citations yet."));
   else winsHost.appendChild(table([
-    { label: "Prompt", cls: "prompt", render: function (r) { return r.prompt; } },
-    { label: "Cluster", render: function (r) { return r.cluster; } },
-    { label: "Position", num: true, render: function (r) { return r.position ? "#" + r.position : "–"; } },
-    { label: "Cited URL", render: function (r) { return link(r.cited_url, shortUrl(r.cited_url)); } },
-    { label: "Device", render: function (r) { return dash(r.device); } },
-    { label: "Checked", render: function (r) { return r.checked_at; } }
+    { label: "Prompt", cls: "prompt", render: function (r) {
+        var span = el("span", null, r.prompt); if (r.lost) span.appendChild(lostTag()); return span; } },
+    { label: "Varsity page cited", cls: "domains", render: function (r) {
+        var ul = el("ul", { class: "plist" });
+        r.pages.forEach(function (pg) {
+          var li = el("li"); li.appendChild(link(pg.url, shortUrl(pg.url) || "URL not recorded"));
+          li.appendChild(el("div", { class: "muted" }, pageType(pg.site, pg.kind))); ul.appendChild(li);
+        });
+        return ul; } },
+    { label: "Best pos.", num: true, render: function (r) { return r.best_position ? "#" + r.best_position : "–"; } },
+    { label: "Cited in", num: true, render: function (r) { return r.cited_runs + " of " + r.runs + " runs"; } },
+    { label: "Last cited", render: function (r) { return r.last_cited; } },
+    { label: "Cluster", render: function (r) { return r.cluster; } }
   ], D.wins));
 
   // ---------- by blog ----------
@@ -550,6 +566,7 @@ footer p { margin: 0 0 6px; }
     { key: "any", label: "Any page cited" },
     { key: "cited_url", label: "Cited URL", cls: "domains" },
     { key: "cited_kind", label: "Page type" },
+    { key: "cited_runs", label: "Cited in", num: true },
     { key: "competitors", label: "Competitors", cls: "domains" },
     { key: "organic_rank", label: "Organic*", num: true },
     { key: "device", label: "Device" },
@@ -577,6 +594,10 @@ footer p { margin: 0 0 6px; }
     if (c.key === "organic_rank") return rankText(v, p.rank_match, p.status);
     if (c.key === "status") return el("span", { class: "pill " + v.replace(/\s/g, "-") }, LABELS[v] || v);
     if (c.key === "varsity" || c.key === "any") return v === "yes" ? el("span", { class: "pill yes" }, "✓ yes") : dash(v);
+    if (c.key === "cited_runs") {
+      if (!p.runs) return "–";
+      var span = el("span", null, v + " of " + p.runs); if (p.lost) span.appendChild(lostTag()); return span;
+    }
     if (c.key === "cited_kind") return dash(pageType(p.cited_site, v));
     if (c.key === "cited_url") return v ? link(v, shortUrl(v) + (p.any_position ? " (#" + p.any_position + ")" : "")) : "–";
     return dash(v);
@@ -584,6 +605,7 @@ footer p { margin: 0 0 6px; }
   function sortVal(p, key) {
     var v = p[key];
     if (key === "competitors") return v.length;
+    if (key === "cited_runs") return p.runs ? v / p.runs + v / 1000 : null;   // consistency, then count
     if (v == null || v === "") return null;
     return v;
   }

@@ -71,14 +71,40 @@ def test_gaps_sorted_by_intent_then_impressions_with_mapped_blog():
     assert r["gaps"][-1]["organic_rank"] == 6
 
 
-def test_latest_check_decides_win_or_gap_and_failed_does_not_hide_it():
+def test_latest_check_decides_gap_and_failed_does_not_hide_it():
     r = report([check("fde course fees", time="08:00"),
                 check("fde course fees", time="09:00", cited="yes", url=V, pos="4"),
                 check("fde course fees", time="10:00", status="failed")])
     assert r["gaps"] == []
-    assert r["wins"] == [{"prompt": "fde course fees", "cluster": "fde", "device": "desktop",
-                          "checked_at": "2026-11-10 09:00", "intent": "fees", "impressions": 0,
-                          "cited_url": V, "position": 4}]
+    assert [(w["prompt"], w["cited_runs"], w["runs"], w["lost"]) for w in r["wins"]] == [("fde course fees", 1, 2, False)]
+
+
+def test_wins_scoreboard_counts_every_run_per_prompt():
+    def brand(p, url, pos, time):
+        row = check(p, time=time)
+        row.update({"brand cited": "yes", "brand url": url, "brand position": pos})
+        return row
+    S = "https://www.scaler.com/academy/fde/"
+    r = report([check("a", time="05:00", cited="yes", url=V, pos="6"), check("a", time="09:00", cited="yes", url=V, pos="3"),
+                check("b", time="05:00", cited="yes", url=V, pos="1"), check("b", time="09:00"),          # lost at 09:00
+                brand("c", S, "2", "05:00"), check("c", time="09:00", status="no_aio"),                  # no AIO counts as a run
+                check("c", time="10:00", status="incomplete"), check("c", time="11:00", status="failed"),  # these don't
+                check("d", time="05:00"), check("d", time="09:00"),                                        # never cited
+                brand("e", "", "", "05:00"), brand("e", S, "4", "09:00"), brand("f", "", "", "05:00")])  # old rows: no URL
+    w = r["wins"]
+    assert [x["prompt"] for x in w] == ["a", "e", "f", "b", "c"]   # 2 of 2 first, then 1 of 2 by best position
+    a, e, f, b, c = w
+    assert [pg["url"] for pg in e["pages"]] == [S]                   # the URL-less older citation is dropped
+    assert f["pages"] == [{"url": "", "kind": "page not recorded", "site": ""}]
+    assert (a["cited_runs"], a["runs"], a["best_position"], a["last_cited"], a["lost"]) == (2, 2, 3, "2026-11-10 09:00", False)
+    assert a["pages"] == [{"url": V, "kind": "blog", "site": "InterviewBit"}] and a["blog_runs"] == 2
+    assert (b["cited_runs"], b["runs"], b["last_cited"], b["lost"]) == (1, 2, "2026-11-10 05:00", True)
+    assert (c["runs"], c["lost"], c["blog_runs"], c["pages"][0]["site"], c["pages"][0]["kind"]) == (
+        2, True, 0, "Scaler", "program page")
+    assert r["wins_blog"] == 2
+    rows = {p["prompt"]: p for p in r["prompts"]}
+    assert (rows["b"]["cited_runs"], rows["b"]["runs"], rows["b"]["lost"]) == (1, 2, True)
+    assert (rows["d"]["cited_runs"], rows["d"]["runs"]) == (0, 2)
 
 
 def test_incomplete_and_no_aio_are_neither_gaps_nor_wins():
