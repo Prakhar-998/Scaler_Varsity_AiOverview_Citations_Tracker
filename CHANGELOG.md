@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- Checks record every Varsity/InterviewBit/Scaler page cited, with positions (`our pages` column,
+  last), not only the first blog and first other brand page.
+- Dashboard: a **Scaler.com (sister brand)** section with the same columns as the wins scoreboard.
+  Wins now count only the Varsity blog and other InterviewBit pages; an AI Overview citing both the
+  blog and Scaler shows in both.
 - Dashboard: a **wins scoreboard** right after the KPIs, headed "Cited for X of N tracked
   prompts": one row per active prompt any of our pages was cited for in any run, with the page,
   best position, cited in X of Y runs, last cited, and a "lost in latest run" tag. It replaces the

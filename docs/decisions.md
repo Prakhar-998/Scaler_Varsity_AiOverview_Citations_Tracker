@@ -393,3 +393,29 @@ citations. Devices are folded per run: a run is cited if any device was.
 pages, Scaler pages), so the KPI note and cluster tooltip split it. Only the first brand page per
 check is recorded, so a check citing both the blog and a Scaler page counts as blog.
 
+## Wins are Varsity + InterviewBit; Scaler gets its own board; every page recorded (2026-11-11)
+
+**Regression check first.** All three blog wins were lost in the 13:26 run, the first after the
+retry and page-recording changes. The saved raw responses (--save-raw) for "fde engineer course
+fee", "help me evaluate the best online learning paths for forward deployed engineering" and
+"forward deployed engineer course for working professionals" contain no /varsity/blog/ URL,
+either in `references[]` or nested in `items[].references[]` / `items[].links[]`. Several
+references are opaque `google.com/goto` links (the token is encrypted), but their `source` labels
+are NDTV, Quality Thought, Codebasics, YouTube, Coding Blocks, IIT Roorkee Futurense and Scaler,
+never InterviewBit, which is the label Varsity references carry. Across every saved raw response the
+parser misses no InterviewBit/Scaler URL. So the losses are real changes in Google's sources, not a
+parser regression, and the parser was not changed.
+
+**Scaler is a sister brand, not a win.** The blog team acts on Varsity and InterviewBit pages; a
+Scaler page being cited is good for the group but isn't their result, so counting it as a win
+inflated the headline. Scaler citations get a separate board with the same columns. The any-page
+KPI keeps its definition (blog + InterviewBit + Scaler) and its note splits it by site.
+
+**Every page, not the first.** `brand url` held only the first non-blog page, so an AI Overview
+citing the blog and a Scaler page, or two of our pages, lost the rest. `our pages` records all of
+them with positions, so a double citation shows on both boards. Older rows fall back to `cited url`
++ `brand url`; the oldest ones know only that a brand page was cited, so those runs count on
+neither board (they'd otherwise be guessed). Known gap: opaque goto references whose `source` is
+"Scaler" (one in the 13:26 learning-paths answer) aren't counted, because matching by source label
+is a separate decision.
+

@@ -183,9 +183,11 @@ Sections:
    and DataForSEO cost so far. Cost covers every run: the
    billed amount where a run logged it, otherwise the run's estimate.
    **Wins scoreboard**, right below, headed "Cited for X of N tracked prompts": every active
-   prompt one of our pages was cited for in any run, with the page, best position, cited in X of
+   prompt the Varsity blog or another InterviewBit page was cited for in any run, with the page, best position, cited in X of
    Y runs (a run counts when it got an answer: ok or no AI Overview), last cited, and a "lost in
-   latest run" tag. Most consistent first, then best position.
+   latest run" tag. Most consistent first, then best position. **Scaler.com (sister brand)**
+   follows with the same columns for Scaler pages; a blog + Scaler double citation shows in both.
+   Old checks that only recorded "a brand page was cited" count on neither board.
 2. **By cluster:** AI Overview presence and both citation rates per cluster.
 3. **Gaps (the action list):** an AI Overview with sources that doesn't cite Varsity, using the
    latest check per prompt and device. Sorted by buying intent, then GSC impressions. Each row
@@ -281,7 +283,7 @@ pmset -g sched                          # confirm; cancel with: sudo pmset sched
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
-| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited) |
+| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited), our pages (every Varsity / InterviewBit / Scaler page cited: `#2 url \| #5 url`) |
 | Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate %, any page citation rate % |
 
 Sample `Checks` rows, built from the real DataForSEO and SERPHouse fixtures:
