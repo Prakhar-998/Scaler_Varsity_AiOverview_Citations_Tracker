@@ -142,6 +142,26 @@ def test_active_prompts_json_defines_the_current_set():
     assert [o["why"] for o in r["other_runs"]] == ["checks of prompts no longer active"]
 
 
+def test_blog_and_any_page_citation_rates_and_cited_page():
+    def brand(p, url, pos):
+        row = check(p)
+        row.update({"brand cited": "yes", "brand url": url, "brand position": pos})
+        return row
+    r = report([check("a", cited="yes", url=V, pos="2"), brand("b", "https://www.scaler.com/academy/fde/", "3"),
+                brand("c", "", ""), check("d"), check("e", status="no_aio")])
+    k = r["kpis"]
+    assert (k["citation_rate"], k["any_rate"], k["any_cited"]) == (25.0, 75.0, 3)
+    assert r["clusters"][0]["any_rate"] == 75.0
+    rows = {p["prompt"]: p for p in r["prompts"]}
+    assert (rows["a"]["any"], rows["a"]["cited_kind"], rows["a"]["any_position"]) == ("yes", "blog", 2)
+    assert (rows["b"]["cited_url"], rows["b"]["cited_kind"], rows["b"]["any_position"]) == (
+        "https://www.scaler.com/academy/fde/", "program page", 3)
+    assert rows["c"]["cited_kind"] == "page not recorded"   # brand cited before brand url was recorded
+    assert (rows["d"]["any"], rows["d"]["cited_url"]) == ("no", "")
+    gap = next(g for g in r["gaps"] if g["prompt"] == "b")
+    assert gap["brand_cited"] and gap["brand_kind"] == "program page"
+
+
 def test_by_blog_lists_cited_pages_and_mapped_blogs_never_cited():
     fees = "https://www.interviewbit.com/varsity/blog/fde-fees/?utm_source=x"
     r = report([check("fde course fees", cited="yes", url=fees, pos="4"),
