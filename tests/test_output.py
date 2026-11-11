@@ -101,7 +101,7 @@ def test_check_row_records_the_brand_page_and_summary_has_any_page_rate():
     ib = SerpResult("q2", STATUS_OK, shown=True, references=[Reference("https://www.interviewbit.com/courses/fde", position=1)])
     d2 = dict(zip(CHECK_HEADERS, check_row(WHEN, "q2", "fde", ib, match_citations(ib))))
     summary = {(row[0], row[1]): dict(zip(SUMMARY_HEADERS, row)) for row in summarise([list(d.values()), list(d2.values())])}
-    assert summary[("fde", "")]["any page citation rate %"] == "100.0"
+    assert summary[("fde", "")]["any page citation rate %"] == "50.0"   # the InterviewBit page counts; Scaler doesn't
 
 
 def test_our_pages_round_trip():

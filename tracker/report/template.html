@@ -297,11 +297,12 @@ footer p { margin: 0 0 6px; }
     "Google India · AI Overviews · generated " + D.generated_at +
     (D.prompts_from ? " · prompts from " + D.prompts_from : "");
   var k = D.kpis;
-  // any-page citations by site: Varsity blog, other InterviewBit pages, Scaler pages
+  // any-page citations: Varsity blog and other InterviewBit pages; Scaler has its own section
   function splitText(sp) {
-    if (!sp) return "blog, program or other IB / Scaler page";
-    return sp.blog + " blog · " + sp.interviewbit + " other InterviewBit · " + sp.scaler + " Scaler" +
-      (sp.not_recorded ? " · " + sp.not_recorded + " page not recorded" : "") + " (one AIO can cite several)";
+    if (!sp) return "blog or other InterviewBit page";
+    return sp.blog + " blog · " + sp.interviewbit + " other InterviewBit" +
+      (sp.not_recorded ? " · " + sp.not_recorded + " older checks don't say which site, not counted" : "") +
+      " · Scaler not included";
   }
   function pageType(site, kind) { return site && kind && kind !== "page not recorded" ? site + " " + kind : kind; }
   // how a page was recognised: its URL; a hidden google.com/goto link matched to a Varsity blog by title; or a
@@ -743,7 +744,7 @@ footer p { margin: 0 0 6px; }
   var footer = document.getElementById("footer");
   footer.appendChild(el("p", null,
     "Rates: AI Overview presence = (ok + incomplete) / successful checks; Varsity blog cited = a /varsity/blog/ page cited / ok; " +
-    "any page = the blog or another interviewbit.com / scaler.com page cited / ok. Page type: \u201cprogram page\u201d when the URL path " +
+    "any page = the blog or another interviewbit.com page cited / ok; Scaler pages are in their own section. Page type: \u201cprogram page\u201d when the URL path " +
     "has course, program or academy, otherwise \u201cother page\u201d; checks from before 2026-11-11 didn't record which brand page " +
     "(\u201cpage not recorded\u201d). Failed checks are left out of every rate."));
   footer.appendChild(el("p", null,

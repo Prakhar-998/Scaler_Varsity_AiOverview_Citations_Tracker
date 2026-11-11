@@ -96,13 +96,17 @@ def _rates(rows: List[Dict[str, str]]) -> Dict:
     ok, inc, no_aio = c["ok"], c["incomplete"], c["no_aio"]
     cited = sum(1 for r in rows if r.get("check status") == "ok" and r.get("varsity cited") == "yes")
     brand = sum(1 for r in rows if r.get("check status") == "ok" and r.get("brand cited") == "yes")
-    anyp = sum(1 for r in rows if r.get("check status") == "ok" and "yes" in (r.get("varsity cited"), r.get("brand cited")))
-    # checks citing each kind of our page; one check can count under several (blog + Scaler)
+    # any page = the Varsity blog or another InterviewBit page (Scaler has its own section). Checks citing
+    # each kind; one check can count under several (blog + Scaler). Old checks that didn't record which
+    # brand page was cited count as "not recorded", never as cited.
     sites = Counter()
+    anyp = 0
     for r in rows:
         pages, unknown = _pages(r)
-        sites.update({k for k in ("InterviewBit", "Scaler") if any(p["site"] == k and p["kind"] != PAGE_BLOG for p in pages)})
-        sites[""] += unknown
+        is_blog = r.get("check status") == "ok" and r.get("varsity cited") == "yes"
+        anyp += is_blog or any(p["site"] == SITE_IB for p in pages)
+        sites.update({k for k in (SITE_IB, SITE_SCALER) if any(p["site"] == k and p["kind"] != PAGE_BLOG for p in pages)})
+        sites[""] += unknown and not is_blog and not any(p["site"] == SITE_IB for p in pages)
     return {"checks": len(rows), "ok": ok, "incomplete": inc, "no_aio": no_aio, "failed": c["failed"],
             "cited": cited, "aio_presence": _pct(ok + inc, ok + inc + no_aio),
             "citation_rate": _pct(cited, ok), "incomplete_rate": _pct(inc, ok + inc),
@@ -207,14 +211,17 @@ def _pages(row: Dict[str, str]):
 
 
 def _citation(row: Dict[str, str]) -> Dict:
-    """The page we're cited with: the Varsity blog, else another InterviewBit page, else Scaler (best
-    position first). Rows from before `brand url` was recorded know a brand page was cited but not which."""
+    """The Varsity / InterviewBit page we're cited with: the blog, else another InterviewBit page (best
+    position first). Scaler pages aren't shown here; they have their own section. any is "not recorded"
+    for old checks that cited a brand page without recording which."""
     pages, unknown = _pages(row)
-    if not pages and not unknown:
-        return {"any": row.get("varsity cited", ""), "url": "", "position": None, "kind": "", "site": "", "match": ""}
-    pages.sort(key=lambda p: (p["kind"] != PAGE_BLOG, p["site"] != SITE_IB, p["position"] or 99))
-    best = pages[0] if pages else {"url": "", "position": None, "kind": NOT_RECORDED, "site": "", "match": ""}
-    return dict(best, any="yes")
+    ours = sorted((p for p in pages if p["site"] == SITE_IB), key=lambda p: (p["kind"] != PAGE_BLOG, p["position"] or 99))
+    if ours:
+        return dict(ours[0], any="yes")
+    none = {"url": "", "position": None, "kind": "", "site": "", "match": ""}
+    if unknown:
+        return dict(none, any=NOT_RECORDED)
+    return dict(none, any="no" if row.get("check status") == "ok" else row.get("varsity cited", ""))
 
 
 def _history(checks: List[Dict[str, str]], site: str) -> Dict[str, Dict]:
@@ -378,7 +385,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             blog = _map_blog(p, r.get("cluster", ""), i["blog"], blogs)
             c = _citation(r)
             gaps.append(dict(base, competitors=_domains(r), organic_rank=_int(r.get("organic rank")),
-                             rank_match=r.get("rank match", ""), brand_cited=r.get("brand cited") == "yes",
+                             rank_match=r.get("rank match", ""), brand_cited=c["any"] == "yes",
                              brand_url=c["url"], brand_kind=c["kind"], brand_site=c["site"], brand_match=c["match"],
                              brand_position=c["position"],
                              blog_title=blog["title"], blog_url=blog["url"], blog_how=blog["how"],

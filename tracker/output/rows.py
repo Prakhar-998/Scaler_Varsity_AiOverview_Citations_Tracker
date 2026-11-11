@@ -98,7 +98,9 @@ def summarise(check_rows: List[List]) -> List[List]:
             if status == STATUS_OK:
                 s["varsity"] += row[idx["varsity cited"]] == "yes"
                 s["brand"] += row[idx["brand cited"]] == "yes"
-                s["any"] += "yes" in (row[idx["varsity cited"]], row[idx["brand cited"]])
+                # any page = the Varsity blog or another InterviewBit page; Scaler is reported separately
+                s["any"] += row[idx["varsity cited"]] == "yes" or any(
+                    pg.site == "InterviewBit" for pg in parse_our_pages(row[idx["our pages"]]))
     out = []
     for key in sorted(stats, key=lambda k: (k[0] == "ALL", k[0], k[1] == "ALL", k[1])):
         s = stats[key]
