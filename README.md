@@ -175,11 +175,19 @@ the data is embedded, the charts are plain SVG, and it makes no network calls. O
 browser, and re-run `report` after each `check` to refresh it. Light and dark mode follow the
 OS, with a toggle.
 
+Hidden links: on both devices some AI Overview sources are `google.com/goto` links whose real URL
+is encrypted; only the site label (`source`) and title are readable. A hidden link labelled
+InterviewBit whose title matches a Varsity blog title in `data/private/blogs.csv` (token_set_ratio
+85 or more) counts as that blog, with the blog URL recorded (match type `title`). Otherwise a
+hidden link labelled InterviewBit or Scaler counts as "InterviewBit page (URL hidden)" or "Scaler
+page (URL hidden)" (match type `label`): toward the any-page KPI (InterviewBit only) or the Scaler
+section, never the blog KPI. `probe` prints how each of our pages was matched.
+
 Sections:
 1. **Headline numbers:** prompts tracked, checks run, AI Overview presence %, **Varsity blog
-   cited** % (a /varsity/blog/ page), **Varsity / InterviewBit cited — any page** % (the blog,
-   program pages or any other interviewbit.com / scaler.com page, split into blog, other
-   InterviewBit and Scaler), incomplete rate %, last check,
+   cited** % (a /varsity/blog/ page), **Varsity / InterviewBit cited — any page** % (the blog
+   or any other interviewbit.com page, split into blog and other InterviewBit; Scaler is not
+   included, it has its own section), incomplete rate %, last check,
    and DataForSEO cost so far. Cost covers every run: the
    billed amount where a run logged it, otherwise the run's estimate.
    **Wins scoreboard**, right below, headed "Cited for X of N tracked prompts": every active
@@ -283,8 +291,8 @@ pmset -g sched                          # confirm; cancel with: sudo pmset sched
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
-| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited), our pages (every Varsity / InterviewBit / Scaler page cited: `#2 url \| #5 url`) |
-| Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate %, any page citation rate % |
+| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited), our pages (every Varsity / InterviewBit / Scaler page cited: `#2 url \| #4 [title] url \| #6 [label] Scaler page (URL hidden)`), varsity match (`url`, or `title` when a hidden link was matched to the blog by title) |
+| Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % (other InterviewBit and Scaler pages), any page citation rate % (Varsity blog or another InterviewBit page) |
 
 Sample `Checks` rows, built from the real DataForSEO and SERPHouse fixtures:
 

@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- Hidden `google.com/goto` references labelled InterviewBit or Scaler count as our pages (match
+  type `label`, "… page (URL hidden)"); a hidden InterviewBit link whose title matches a Varsity
+  blog title counts as that blog (match type `title`) with the blog URL recorded. New Checks
+  column `varsity match`. Fixture: the real 13:26 learning-paths response.
 - Checks record every Varsity/InterviewBit/Scaler page cited, with positions (`our pages` column,
   last), not only the first blog and first other brand page.
 - Dashboard: a **Scaler.com (sister brand)** section with the same columns as the wins scoreboard.
@@ -92,6 +96,10 @@
 - Offline test suite.
 
 ### Changed
+- The "Varsity / InterviewBit cited — any page" KPI, cluster rates, prompts table and Summary
+  `any page citation rate %` count the Varsity blog and other InterviewBit pages only. Scaler
+  pages have their own section. Old checks that didn't record which brand page was cited no
+  longer count toward it.
 - Dashboard history is per prompt: checks of prompts still active count from every real run, so a
   change to the active set no longer discards earlier runs. Trend points use the prompts each run
   checked.

@@ -415,7 +415,33 @@ KPI keeps its definition (blog + InterviewBit + Scaler) and its note splits it b
 citing the blog and a Scaler page, or two of our pages, lost the rest. `our pages` records all of
 them with positions, so a double citation shows on both boards. Older rows fall back to `cited url`
 + `brand url`; the oldest ones know only that a brand page was cited, so those runs count on
-neither board (they'd otherwise be guessed). Known gap: opaque goto references whose `source` is
-"Scaler" (one in the 13:26 learning-paths answer) aren't counted, because matching by source label
-is a separate decision.
+neither board (they'd otherwise be guessed). Opaque goto references labelled "Scaler" (one in the
+13:26 learning-paths answer) weren't counted at the time; see the next section.
+
+## Hidden links count by label or title; any page excludes Scaler (2026-11-11)
+
+**Hidden links.** Some AI Overview references are `google.com/goto` links with an encrypted
+target; only `source` (the site label) and `title` are readable. Ignoring them under-counted us:
+the 13:26 learning-paths answer cites a Scaler page that way. Now a hidden link labelled
+InterviewBit or Scaler is one of our pages with match type `label`, shown as "InterviewBit page
+(URL hidden)" or "Scaler page (URL hidden)". It counts toward the any-page KPI (InterviewBit) or
+the Scaler section, never the blog KPI, because the label can't say which page it is.
+
+**Blog by title, InterviewBit labels only.** A hidden InterviewBit link counts as a Varsity blog
+when its title matches a blog title in data/private/blogs.csv (match type `title`, the blog URL
+recorded). Calibrated on the saved raw responses: Google rewrites titles, and the real fees blog
+scored 89.5 (token_set_ratio) against its own title, while other InterviewBit pages scored under
+60, so the threshold is 85. Scaler-labelled links are never title-matched: Scaler's "AI Engineer
+Roadmap 2026" scored 89.8 against the GenAI roadmap blog and would have been a false blog citation.
+Site suffixes ("- InterviewBit") and trailing ellipses are stripped; titles under 3 words never match.
+
+**Any page excludes Scaler.** The any-page KPI now means the Varsity blog or another InterviewBit
+page, the same set as the wins scoreboard, so the two numbers agree. On today's data it went from
+13.8% (17 of 123) to 4.9% (6 of 123): 3 Scaler citations moved out, and 8 old checks that
+recorded only "a brand page was cited" can't be attributed to either site, so they no longer
+count. The Summary's `any page citation rate %` follows the same definition.
+
+**Past runs aren't re-matched.** Checks are matched when they run; the 13:26 checks were written
+before hidden links were counted, so the dashboard won't show that run's hidden Scaler link.
+Re-matching a run from its saved raw responses would be a separate, explicit step.
 
