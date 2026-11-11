@@ -6,10 +6,12 @@ CSVs today and the Sheets tabs later. `load_runs` reads runs/; `build_report` is
 Definitions match the Summary tab (tracker/output/rows.py): failed checks are left out of every
 rate, incomplete AI Overviews count as shown but not in the citation rate.
 
-Every number except spend uses only checks of the current active prompt set. Checks are tagged with
-the set they ran on (`prompt set`); older checks without the tag count as the active set only when
-their run checked exactly the active prompts. Everything else (check --prompts test runs, earlier
-prompt sets) is listed under `other_runs`.
+History is per prompt: every number except spend and the trend uses the checks of prompts that are
+in the current active set, from any real run, so adding or removing prompts never discards earlier
+checks of the prompts that stay. Real runs are tagged with the set they ran on (`set-...`); test runs
+(`check --prompts`) are tagged `file:...` and never count. Older untagged runs count as real when
+they checked exactly a set some `select` produced (any prompts.csv under runs/). The trend uses all
+the checks each real run made. Left-out checks are summarised under `other_runs`.
 """
 from __future__ import annotations
 
@@ -42,6 +44,7 @@ class RunInputs:
     checks: List[Dict[str, str]] = field(default_factory=list)   # every Checks row, all runs
     costs: List[Dict[str, str]] = field(default_factory=list)    # runs/cost_log.csv rows
     active: List[str] = field(default_factory=list)               # runs/active_prompts.json prompts
+    known_sets: List[str] = field(default_factory=list)           # set ids of every select's active prompts
 
 
 def _stamp(path: Path) -> str:
@@ -59,6 +62,10 @@ def load_runs(runs: Path) -> RunInputs:
     out = RunInputs()
     dirs = sorted((d for d in runs.glob("*run-*") if d.is_dir()), key=_stamp)
     with_prompts = [d for d in dirs if (d / "prompts.csv").exists()]
+    for d in with_prompts:
+        kept = [r["prompt"] for r in _read(d / "prompts.csv") if r.get("status") == "active"]
+        if kept:
+            out.known_sets.append(prompt_set_id(kept))
     if with_prompts:
         latest = with_prompts[-1]
         out.prompts, out.prompts_from = _read(latest / "prompts.csv"), latest.name
@@ -117,27 +124,37 @@ def _latest_per_prompt(checks: List[Dict[str, str]]) -> List[Dict[str, str]]:
     return list(latest.values())
 
 
-def _split_by_prompt_set(checks: List[Dict[str, str]], current: str):
-    """(checks of the current set, summary of every other run). A run is one check timestamp."""
+def _key(prompt: str) -> str:
+    return prompt.strip().lower()
+
+
+def _split_runs(checks: List[Dict[str, str]], active: List[str], known_sets: set):
+    """Split checks by run (one check timestamp) into
+    (checks of still-active prompts from real runs, every check of real runs, summary of what was left out)."""
     runs: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for r in checks:
         runs[_checked_at(r)].append(r)
-    mine, others = [], []
+    keep = {_key(p) for p in active}
+    tracked, real, others = [], [], []
     for at, rows in sorted(runs.items()):
         tag = next((r["prompt set"] for r in rows if r.get("prompt set")), "")
-        # checks from before tagging: the active set only if the run checked exactly it
-        if not current or tag == current or (not tag and prompt_set_id(r["prompt"] for r in rows) == current):
-            mine += rows
-            continue
+        n_prompts = len({r["prompt"] for r in rows})
         if tag.startswith("file:"):
-            why = f"check --prompts {tag[5:]} (test run)"
-        elif tag:
-            why = "earlier prompt set"
-        else:
-            why = "untagged run that didn't check the active set"
-        others.append({"checked_at": at, "checks": len(rows), "prompts": len({r["prompt"] for r in rows}),
-                       "prompt_set": tag, "why": why})
-    return mine, others
+            others.append({"checked_at": at, "checks": len(rows), "prompts": n_prompts, "prompt_set": tag,
+                           "why": f"check --prompts {tag[5:]} (test run)"})
+            continue
+        if not tag and keep and prompt_set_id(r["prompt"] for r in rows) not in known_sets:
+            others.append({"checked_at": at, "checks": len(rows), "prompts": n_prompts, "prompt_set": "",
+                           "why": "untagged run of a prompt list no select produced (test run)"})
+            continue
+        real += rows
+        mine = [r for r in rows if not keep or _key(r["prompt"]) in keep]
+        tracked += mine
+        if len(mine) < len(rows):
+            gone = {r["prompt"] for r in rows} - {r["prompt"] for r in mine}
+            others.append({"checked_at": at, "checks": len(rows) - len(mine), "prompts": len(gone), "prompt_set": tag,
+                           "why": "checks of prompts no longer active"})
+    return tracked, real, others
 
 
 def _map_blog(prompt: str, cluster: str, named: str, blogs: List[Blog]) -> Dict[str, str]:
@@ -201,7 +218,8 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
     # active_prompts.json is what `check` runs; the latest prompts.csv is the fallback
     active = inputs.active or [r["prompt"] for r in active_rows]
     current = prompt_set_id(active) if active else ""
-    checks, other_runs = _split_by_prompt_set(inputs.checks, current)
+    known = set(inputs.known_sets) | {current} | ({prompt_set_id(r["prompt"] for r in active_rows)} if active_rows else set())
+    checks, real_checks, other_runs = _split_runs(inputs.checks, active, known)
     latest = _latest_per_prompt(checks)
 
     def info(prompt: str) -> Dict:
@@ -283,11 +301,12 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                           "competitors": [], "organic_rank": None, "rank_match": "", "device": "",
                           "status": "not checked", "checked_at": ""})
 
-    # 7. trend: citation rate per check run (one timestamp per run, all devices)
+    # 7. trend: citation rate per check run (one timestamp per run, all devices), over the prompts that run checked
     by_run = defaultdict(list)
-    for r in checks:
+    for r in real_checks:
         by_run[_checked_at(r)].append(r)
-    trend = [dict(_rates(rows), run=at) for at, rows in sorted(by_run.items()) if at]
+    trend = [dict(_rates(rows), run=at, prompts=len({r["prompt"] for r in rows}))
+             for at, rows in sorted(by_run.items()) if at]
 
     # 8. by blog
     tracked = {r["prompt"]: r.get("cluster", "") for r in latest}

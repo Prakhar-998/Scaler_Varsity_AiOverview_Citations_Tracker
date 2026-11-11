@@ -153,7 +153,7 @@ footer p { margin: 0 0 6px; }
 
   <section aria-labelledby="h-cluster">
     <div class="sec-head"><div><h2 id="h-cluster">By cluster</h2>
-      <p>AI Overview presence and Varsity citation rate (of AI Overviews with sources), all checks of the active set.</p></div></div>
+      <p>AI Overview presence and Varsity citation rate (of AI Overviews with sources), all checks of the active prompts (from every real run).</p></div></div>
     <div class="legend" id="cluster-legend"></div>
     <div class="chart" id="cluster-chart"></div>
   </section>
@@ -173,7 +173,7 @@ footer p { margin: 0 0 6px; }
 
   <section aria-labelledby="h-blogs">
     <div class="sec-head"><div><h2 id="h-blogs">By blog</h2>
-      <p>Varsity pages cited in any check of the active set, the prompts citing each and its best position.</p></div>
+      <p>Varsity pages cited in any check of an active prompt, the prompts citing each and its best position.</p></div>
       <span class="count" id="blogs-count"></span></div>
     <div id="blogs-cited"></div>
     <h3 class="sub-head">Mapped blogs never cited</h3>
@@ -202,7 +202,7 @@ footer p { margin: 0 0 6px; }
 
   <section aria-labelledby="h-trend">
     <div class="sec-head"><div><h2 id="h-trend">Trend over runs</h2>
-      <p>Varsity citation rate per check run.</p></div></div>
+      <p>Varsity citation rate per check run, over the prompts that run checked.</p></div></div>
     <div class="chart" id="trend-chart"></div>
   </section>
 
@@ -317,7 +317,7 @@ footer p { margin: 0 0 6px; }
     var box = document.getElementById("other-runs"), n = 0;
     others.forEach(function (o) { n += o.checks; });
     box.appendChild(el("summary", null, others.length + " other run" + (others.length > 1 ? "s" : "") + " (" + n +
-      " checks) not counted: test runs and earlier prompt sets. Only the active set's checks are shown."));
+      " checks) not counted: test runs, and past checks of prompts no longer active. Every active prompt keeps its history."));
     var ul = el("ul");
     others.forEach(function (o) {
       ul.appendChild(el("li", null, o.checked_at + " · " + o.checks + " checks of " + o.prompts + " prompts · " + o.why));
@@ -663,7 +663,8 @@ footer p { margin: 0 0 6px; }
       cross.setAttribute("x1", x(best)); cross.setAttribute("x2", x(best)); cross.setAttribute("visibility", "visible");
       showTip(e, "Run " + p.run, [{ label: "Varsity citation rate", value: pct(p.citation_rate), color: "var(--s1)" },
         { label: "Cited / with sources", value: p.cited + " / " + p.ok },
-        { label: "AI Overview presence", value: pct(p.aio_presence) }, { label: "Checks", value: String(p.checks) }]);
+        { label: "AI Overview presence", value: pct(p.aio_presence) }, { label: "Checks", value: String(p.checks) },
+        { label: "Prompts checked", value: String(p.prompts) }]);
     });
     hit.addEventListener("mouseleave", function () { cross.setAttribute("visibility", "hidden"); hideTip(); });
     s.appendChild(hit);

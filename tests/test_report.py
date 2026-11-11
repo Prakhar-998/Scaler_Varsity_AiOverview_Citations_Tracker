@@ -113,25 +113,33 @@ def test_trend_one_point_per_check_run_and_clusters_in_config_order():
     assert [c["cluster"] for c in r["clusters"]] == ["fde", "genai"]
 
 
-def test_only_the_active_sets_checks_count():
-    prompts = [prompt("a"), prompt("b")]
-    current = prompt_set_id(["a", "b"])
-    r = report([check("a", time="08:00", cited="yes", pset=current), check("b", time="08:00", pset=current),
-                check("a", time="07:00", pset="file:test_prompts.csv"),        # check --prompts test run
-                check("a", time="06:00", pset="set-0ld0ld00"),                 # earlier prompt set
-                check("a", time="05:00"), check("b", time="05:00"),            # untagged, exactly the set
-                check("a", time="04:00")], prompts)                            # untagged, not the set
-    assert r["kpis"]["checks"] == 4 and r["kpis"]["checks_excluded"] == 3
-    assert r["kpis"]["prompt_set"] == current
-    assert [(o["checked_at"][-5:], o["why"]) for o in r["other_runs"]] == [
-        ("04:00", "untagged run that didn't check the active set"), ("06:00", "earlier prompt set"),
+def test_history_is_per_prompt_and_test_runs_never_count():
+    prompts = [prompt("a"), prompt("b"), prompt("c")]                 # active now: a, b, c (c was just added)
+    old_set = prompt_set_id(["a", "b", "x"])
+    r = build_report(RunInputs(prompts, "run", [
+        check("a", time="09:00", cited="yes", pset=prompt_set_id(["a", "b", "c"])),
+        check("b", time="09:00", pset=prompt_set_id(["a", "b", "c"])), check("c", time="09:00"),
+        check("a", time="06:00", pset=old_set), check("x", time="06:00", pset=old_set),   # x was removed since
+        check("a", time="05:00"), check("b", time="05:00"),                  # untagged, a set select produced
+        check("a", time="07:00", pset="file:test_prompts.csv"),             # check --prompts test run
+        check("a", time="04:00")], [], known_sets=[prompt_set_id(["a", "b"])]),  # untagged, unknown list
+        CLUSTERS, BLOGS)
+    k = r["kpis"]
+    assert k["checks"] == 6  # 3 at 09:00 + a at 06:00 + a, b at 05:00: earlier runs still count for a and b
+    assert k["checks_excluded"] == 3
+    assert sorted((o["checked_at"][-5:], o["why"]) for o in r["other_runs"]) == [
+        ("04:00", "untagged run of a prompt list no select produced (test run)"),
+        ("06:00", "checks of prompts no longer active"),
         ("07:00", "check --prompts test_prompts.csv (test run)")]
+    # trend: one point per real run, over the prompts that run checked (x included at 06:00)
+    assert [(t["run"][-5:], t["prompts"]) for t in r["trend"]] == [("05:00", 2), ("06:00", 2), ("09:00", 3)]
 
 
 def test_active_prompts_json_defines_the_current_set():
     inputs = RunInputs([prompt("a"), prompt("b")], "run", [check("a"), check("b")], [], active=["a"])
     r = build_report(inputs, CLUSTERS, BLOGS)
-    assert r["kpis"]["prompts_tracked"] == 1 and r["kpis"]["checks"] == 0 and len(r["other_runs"]) == 1
+    assert r["kpis"]["prompts_tracked"] == 1 and r["kpis"]["checks"] == 1   # b was dropped; a keeps its check
+    assert [o["why"] for o in r["other_runs"]] == ["checks of prompts no longer active"]
 
 
 def test_by_blog_lists_cited_pages_and_mapped_blogs_never_cited():
@@ -156,6 +164,12 @@ def _write(path, headers, rows):
         w = csv.DictWriter(f, fieldnames=headers)
         w.writeheader()
         w.writerows(rows)
+
+
+def test_load_runs_collects_every_selects_set_id(tmp_path):
+    _write(tmp_path / "dry-run-20261109-100000/prompts.csv", PROMPT_HEADERS, [prompt("old"), prompt("d", status="dropped")])
+    _write(tmp_path / "run-20261110-090000/prompts.csv", PROMPT_HEADERS, [prompt("new")])
+    assert load_runs(tmp_path).known_sets == [prompt_set_id(["old"]), prompt_set_id(["new"])]
 
 
 def test_load_runs_uses_latest_prompts_and_all_checks(tmp_path):
