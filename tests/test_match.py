@@ -135,3 +135,21 @@ def test_social_results_without_display_url_never_match():
     r = SerpResult(query="q", status=STATUS_OK, organic=[
         OrganicResult("https://www.google.com/goto?url=CAESopaque", position=1, display_url="")])
     assert match_citations(r).rank_match == ""
+
+
+def test_page_kind():
+    from tracker.match import page_kind
+
+    assert page_kind("https://www.interviewbit.com/varsity/blog/x/") == "blog"
+    assert page_kind("https://www.scaler.com/academy/fde-program/") == "program page"
+    assert page_kind("https://www.interviewbit.com/courses/x") == "program page"
+    assert page_kind("https://www.scaler.com/topics/x") == "other page"
+    assert page_kind("https://fde.academy/") == "" and page_kind("") == ""
+
+
+def test_brand_position_is_the_first_brand_reference():
+    r = SerpResult("q", "ok", shown=True, references=[
+        Reference("https://a.com/x", position=1), Reference("https://www.scaler.com/academy/x", position=2),
+        Reference("https://www.interviewbit.com/courses/y", position=3)])
+    m = match_citations(r)
+    assert m.brand_cited and m.brand_position == 2 and len(m.brand_urls) == 2

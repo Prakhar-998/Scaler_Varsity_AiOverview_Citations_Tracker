@@ -12,6 +12,10 @@ VARSITY_PREFIX = "interviewbit.com/varsity/blog/"
 VARSITY_DOMAIN = VARSITY_PREFIX.split("/", 1)[0]
 RANK_URL, RANK_DOMAIN = "url", "domain"
 BRAND_DOMAINS = ("interviewbit.com", "scaler.com")
+# Path words that mark an InterviewBit/Scaler program (course) page rather than other content
+# (topics, articles, events). A heuristic: the cited URL is always shown next to the label.
+PROGRAM_PATH_WORDS = ("course", "program", "academy")
+PAGE_BLOG, PAGE_PROGRAM, PAGE_OTHER = "blog", "program page", "other page"
 
 
 def _on_domain(domain: str, root: str) -> bool:
@@ -30,6 +34,18 @@ def is_brand(url: str) -> bool:
     return any(_on_domain(d, root) for root in BRAND_DOMAINS)
 
 
+def page_kind(url: str) -> str:
+    """blog (/varsity/blog/), program page, or other page, for an InterviewBit/Scaler URL; "" otherwise."""
+    if not url:
+        return ""
+    if is_varsity(url):
+        return PAGE_BLOG
+    if not is_brand(url):
+        return ""
+    path = normalise_url(url).split("/", 1)[1] if "/" in normalise_url(url) else ""
+    return PAGE_PROGRAM if any(w in path for w in PROGRAM_PATH_WORDS) else PAGE_OTHER
+
+
 @dataclass
 class CitationMatch:
     varsity_cited: bool = False
@@ -37,6 +53,7 @@ class CitationMatch:
     position: Optional[int] = None  # position of first Varsity reference in the AIO
     brand_cited: bool = False
     brand_urls: List[str] = field(default_factory=list)
+    brand_position: Optional[int] = None  # position of the first other InterviewBit/Scaler reference
     organic_rank: Optional[int] = None  # best organic rank of any Varsity page
     # "url": a /varsity/blog/ URL was seen. "domain": only the interviewbit.com domain was visible
     # (opaque Google redirect), so it could be another interviewbit.com page. "" when not found.
@@ -51,7 +68,8 @@ def match_citations(result: SerpResult) -> CitationMatch:
             if not m.varsity_cited:
                 m.varsity_cited, m.cited_url, m.position = True, ref.url, ref.position
         elif is_brand(ref.url):
-            m.brand_cited = True
+            if not m.brand_cited:
+                m.brand_cited, m.brand_position = True, ref.position
             m.brand_urls.append(ref.url)
         elif is_google_redirect(ref.url) and unwrap_google_redirect(ref.url) is None:
             # opaque mobile google.com/goto link: the real domain is unknown, so it is not

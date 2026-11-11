@@ -89,3 +89,13 @@ def test_prompt_row_has_source_and_brand_tag():
                  status="active", reason="kept: GSC match", sources=["gsc: fde academy course fees (800 impr)"])
     row = dict(zip(PROMPT_HEADERS, prompt_row(d)))
     assert row["source"] == "gsc" and row["brand tag"] == "competitor"
+
+
+def test_check_row_records_the_brand_page_and_summary_has_any_page_rate():
+    r = SerpResult("q", STATUS_OK, shown=True, references=[Reference("https://x.com/a", position=1),
+                                                            Reference("https://www.scaler.com/academy/fde/", position=2)])
+    d = dict(zip(CHECK_HEADERS, check_row(WHEN, "q", "fde", r, match_citations(r))))
+    assert (d["varsity cited"], d["brand cited"], d["brand url"], d["brand position"]) == (
+        "no", "yes", "https://www.scaler.com/academy/fde/", 2)
+    summary = {(row[0], row[1]): dict(zip(SUMMARY_HEADERS, row)) for row in summarise([list(d.values())])}
+    assert summary[("fde", "")]["any page citation rate %"] == "100.0"

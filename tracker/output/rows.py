@@ -13,9 +13,10 @@ PROMPT_HEADERS = ["prompt", "cluster", "source", "brand tag", "intent", "score",
                   "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "device", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
-                 "error", "prompt set"]
+                 "error", "prompt set", "brand url", "brand position"]
 SUMMARY_HEADERS = ["cluster", "device", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
-                   "varsity citation rate %", "incomplete rate %", "brand citation rate %"]
+                   "varsity citation rate %", "incomplete rate %", "brand citation rate %",
+                   "any page citation rate %"]
 
 
 def prompt_row(d) -> List:
@@ -40,6 +41,7 @@ def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: 
         m.cited_url, m.position or "", _yn(m.brand_cited) if cited_known else "",
         m.organic_rank or "", m.rank_match, ", ".join(m.competing_domains[:10]),
         result.status, error, prompt_set,
+        (m.brand_urls[0] if m.brand_urls else "") if cited_known else "", (m.brand_position or "") if cited_known else "",
     ]
 
 
@@ -54,6 +56,7 @@ def summarise(check_rows: List[List]) -> List[List]:
     AI Overview presence % = AIO detected (ok + incomplete) / (ok + incomplete + no_aio)
     Varsity citation rate % = Varsity cited / ok        (incomplete: sources unknown)
     Incomplete rate %       = incomplete / AIO detected
+    Any page citation rate % = Varsity blog or another InterviewBit/Scaler page cited / ok
     Failed checks are counted but kept out of every denominator.
     """
     idx = {h: i for i, h in enumerate(CHECK_HEADERS)}
@@ -70,6 +73,7 @@ def summarise(check_rows: List[List]) -> List[List]:
             if status == STATUS_OK:
                 s["varsity"] += row[idx["varsity cited"]] == "yes"
                 s["brand"] += row[idx["brand cited"]] == "yes"
+                s["any"] += "yes" in (row[idx["varsity cited"]], row[idx["brand cited"]])
     out = []
     for key in sorted(stats, key=lambda k: (k[0] == "ALL", k[0], k[1] == "ALL", k[1])):
         s = stats[key]
@@ -77,5 +81,5 @@ def summarise(check_rows: List[List]) -> List[List]:
         detected = ok + inc
         out.append([*key, s["checks"], ok, inc, no_aio, s[STATUS_FAILED],
                     _pct(detected, detected + no_aio), _pct(s["varsity"], ok),
-                    _pct(inc, detected), _pct(s["brand"], ok)])
+                    _pct(inc, detected), _pct(s["brand"], ok), _pct(s["any"], ok)])
     return out
