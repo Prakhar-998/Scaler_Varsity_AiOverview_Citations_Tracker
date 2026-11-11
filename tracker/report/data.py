@@ -7,7 +7,8 @@ Definitions match the Summary tab (tracker/output/rows.py): failed checks are le
 rate, incomplete AI Overviews count as shown but not in the citation rate.
 
 History is per prompt: every number except spend and the trend uses the checks of prompts that are
-in the current active set, from any real run, so adding or removing prompts never discards earlier
+in the current active set (matched by `_key`, so case, spacing and a trailing full stop don't matter),
+from any real run, so adding or removing prompts never discards earlier
 checks of the prompts that stay. Real runs are tagged with the set they ran on (`set-...`); test runs
 (`check --prompts`) are tagged `file:...` and never count. Older untagged runs count as real when
 they checked exactly a set some `select` produced (any prompts.csv under runs/). The trend uses all
@@ -35,6 +36,7 @@ INTENT_WEIGHTS = {intent: weight for intent, _, weight in INTENT_PATTERNS}
 BLOG_MATCH_THRESHOLD = 60  # token_set_ratio, prompt vs blog title + primary keyword
 _IMPRESSIONS_RE = re.compile(r"gsc: .*?\((\d+) impr\)")
 _BLOG_RE = re.compile(r"(?:^|; )blog: (.+?)(?:; |$)")
+_TRAILING_PUNCT = ".,;:!?\u2026"
 
 
 @dataclass
@@ -126,7 +128,9 @@ def _latest_per_prompt(checks: List[Dict[str, str]]) -> List[Dict[str, str]]:
 
 
 def _key(prompt: str) -> str:
-    return prompt.strip().lower()
+    """How past checks match active prompts: lowercase, trimmed, spaces collapsed, no trailing punctuation,
+    so "Best FDE course." checked in the pilot run still counts for the active "best fde course"."""
+    return " ".join(prompt.lower().split()).rstrip(_TRAILING_PUNCT).rstrip()
 
 
 def _split_runs(checks: List[Dict[str, str]], active: List[str], known_sets: set):
@@ -135,7 +139,7 @@ def _split_runs(checks: List[Dict[str, str]], active: List[str], known_sets: set
     runs: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for r in checks:
         runs[_checked_at(r)].append(r)
-    keep = {_key(p) for p in active}
+    keep = {_key(p): p for p in active}
     tracked, real, others = [], [], []
     for at, rows in sorted(runs.items()):
         tag = next((r["prompt set"] for r in rows if r.get("prompt set")), "")
@@ -149,10 +153,12 @@ def _split_runs(checks: List[Dict[str, str]], active: List[str], known_sets: set
                            "why": "untagged run of a prompt list no select produced (test run)"})
             continue
         real += rows
-        mine = [r for r in rows if not keep or _key(r["prompt"]) in keep]
+        # checks of an active prompt carry its active spelling from here on
+        mine = [dict(r, prompt=keep[_key(r["prompt"])]) if keep else r
+                for r in rows if not keep or _key(r["prompt"]) in keep]
         tracked += mine
         if len(mine) < len(rows):
-            gone = {r["prompt"] for r in rows} - {r["prompt"] for r in mine}
+            gone = {_key(r["prompt"]) for r in rows} - {_key(r["prompt"]) for r in mine}
             others.append({"checked_at": at, "checks": len(rows) - len(mine), "prompts": len(gone), "prompt_set": tag,
                            "why": "checks of prompts no longer active"})
     return tracked, real, others

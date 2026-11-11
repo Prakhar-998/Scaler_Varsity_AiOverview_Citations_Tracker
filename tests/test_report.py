@@ -135,6 +135,17 @@ def test_history_is_per_prompt_and_test_runs_never_count():
     assert [(t["run"][-5:], t["prompts"]) for t in r["trend"]] == [("05:00", 2), ("06:00", 2), ("09:00", 3)]
 
 
+def test_past_checks_match_active_prompts_by_normalised_text():
+    s = prompt_set_id(["best fde course"])
+    inputs = RunInputs([], "run", [check("Best  FDE course. ", cited="yes", url=V, pos="9", time="05:00", pset=s),
+                                   check("best fde course", time="09:00", pset=s),
+                                   check("best fde courses", time="09:00", pset=s)], [], active=["best fde course"])
+    r = build_report(inputs, CLUSTERS, BLOGS)
+    assert r["kpis"]["checks"] == 2 and r["kpis"]["cited"] == 1    # the pilot spelling counts; "courses" doesn't
+    assert {c["prompt"] for c in r["by_blog"]["cited"][0]["prompts"]} == {"best fde course"}  # active spelling
+    assert [p["prompt"] for p in r["prompts"]] == ["best fde course"]
+
+
 def test_active_prompts_json_defines_the_current_set():
     inputs = RunInputs([prompt("a"), prompt("b")], "run", [check("a"), check("b")], [], active=["a"])
     r = build_report(inputs, CLUSTERS, BLOGS)
