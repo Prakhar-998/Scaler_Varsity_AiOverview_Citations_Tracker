@@ -350,3 +350,23 @@ the planned checks with the cap (exit 3 if over). Then it caps SERP calls at cap
 and the late-load retry draw from the same pool, and spend can never pass the cap. If they use it
 up, the remaining checks are skipped with a warning rather than overspending. The cost log's
 estimate is now calls made × rate, retries included.
+
+## History per prompt, not per set; a second "any page" citation KPI (2026-11-11)
+
+**Per prompt.** Counting only checks tagged with the current set threw history away whenever the
+set changed: the 2026-11-10 select went from 50 to 37 prompts, and the 15:49 run's checks of the 18
+prompts that stayed disappeared. Now a check counts when its prompt is active now and its run was
+a real run. Real means tagged `set-...`, or untagged but checking exactly a set some `select`
+produced (every prompts.csv under runs/ is read for this). Test runs (`file:...`, or an untagged
+list no select produced) never count. On today's data: 92 checks (74 from today, 18 from 11-10
+15:49), and 47 left out (15 test checks, 32 checks of removed prompts). The trend is the
+exception: each run's point uses all the prompts that run checked, so a past point shows what that
+run measured. Prompt counts per point are in the tooltip, because a changing set shifts the rate.
+
+**Two citation KPIs.** "Varsity blog cited" (/varsity/blog/) stays the main metric: it's what the
+blog team can act on. "Varsity / InterviewBit cited — any page" adds program pages and any other
+interviewbit.com / scaler.com page, because an AI Overview citing the FDE program page is still a
+win for the business. Checks now record the first such page and its position (`brand url`,
+`brand position`). Page type is a heuristic: "program page" when the URL path contains course,
+program or academy, otherwise "other page", and the URL is always shown next to it. Checks from
+before this change know a brand page was cited but not which, shown as "page not recorded".

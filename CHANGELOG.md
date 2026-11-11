@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- Checks record the first other InterviewBit/Scaler page cited (`brand url`, `brand position`),
+  and the Summary has an `any page citation rate %`.
+- Dashboard: a second citation KPI, "Varsity / InterviewBit cited — any page", in the KPIs, the
+  cluster chart and the prompts table, with the cited URL and its page type (blog, program page,
+  other page).
 - Checks record the prompt set they ran on (`prompt set` column, last): `set-<hash>` for the
   active set, `file:<name>` for `check --prompts`.
 - Dashboard: a **By blog** section (cited Varsity pages with the prompts citing each and their best
@@ -76,6 +81,9 @@
 - Offline test suite.
 
 ### Changed
+- Dashboard history is per prompt: checks of prompts still active count from every real run, so a
+  change to the active set no longer discards earlier runs. Trend points use the prompts each run
+  checked.
 - `check --max-cost` is a hard cap that includes retries (it limits SERP calls to cap ÷ rate), and
   the cost log's estimate counts every call made instead of the planned checks.
 - `select --prompts <csv> --no-probe` keeps every prompt from the file (reason "curated, not

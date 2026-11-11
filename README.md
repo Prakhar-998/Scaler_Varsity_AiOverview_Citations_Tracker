@@ -165,19 +165,23 @@ skipped with a warning. The cost log's estimate counts every call made, retries 
 ```
 
 `report` reads `runs/active_prompts.json`, the latest `prompts.csv`, every `checks.csv` under
-`runs/`, `runs/cost_log.csv`, and `data/private/blogs.csv` (to map gaps to a blog). Every number
-except spend uses only checks of the **active prompt set**: each check row records the set it ran on
-(`prompt set`), and test runs (`check --prompts`, tagged `file:<name>`) and earlier prompt sets are
-left out and listed in a small "other runs" note. It writes **one self-contained HTML file**:
+`runs/`, `runs/cost_log.csv`, and `data/private/blogs.csv` (to map gaps to a blog). History is
+**per prompt**: every number except spend and the trend uses the checks of prompts that are active
+now, from every real run, so adding or removing prompts never discards the history of the prompts
+that stay. Each check row records the set it ran on (`prompt set`). Test runs (`check --prompts`,
+tagged `file:<name>`) never count; untagged older runs count only if they checked a set some
+`select` produced. What's left out is listed in a small "other runs" note. It writes **one self-contained HTML file**:
 the data is embedded, the charts are plain SVG, and it makes no network calls. Open it in a
 browser, and re-run `report` after each `check` to refresh it. Light and dark mode follow the
 OS, with a toggle.
 
 Sections:
-1. **Headline numbers:** prompts tracked, checks run, AI Overview presence %, Varsity citation
-   rate %, incomplete rate %, last check, and DataForSEO cost so far. Cost covers every run: the
+1. **Headline numbers:** prompts tracked, checks run, AI Overview presence %, **Varsity blog
+   cited** % (a /varsity/blog/ page), **Varsity / InterviewBit cited — any page** % (the blog,
+   program pages or any other interviewbit.com / scaler.com page), incomplete rate %, last check,
+   and DataForSEO cost so far. Cost covers every run: the
    billed amount where a run logged it, otherwise the run's estimate.
-2. **By cluster:** AI Overview presence and citation rate per cluster.
+2. **By cluster:** AI Overview presence and both citation rates per cluster.
 3. **Gaps (the action list):** an AI Overview with sources that doesn't cite Varsity, using the
    latest check per prompt and device. Sorted by buying intent, then GSC impressions. Each row
    shows who is cited instead, our organic rank, and the Varsity blog to improve (the blog the
@@ -188,8 +192,11 @@ Sections:
    **By blog:** each Varsity page cited, the prompts citing it and its best position; then the
    blogs tracked prompts map to that were never cited.
 5. **Top competing domains:** the share of the latest AI Overviews that cite each domain.
-6. **All prompts:** sortable, filterable by cluster, device and status.
-7. **Trend:** citation rate per check run (one point per run timestamp). It shows "needs 2+
+6. **All prompts:** sortable, filterable by cluster, device and status. Shows blog cited, any page
+   cited, the cited URL and its page type: blog, program page (URL path has course, program or
+   academy) or other page.
+7. **Trend:** blog citation rate per check run (one point per run timestamp), over the prompts that
+   run checked. It shows "needs 2+
    check runs" until there are two.
 
 `dashboard/` is gitignored, because the real dashboard embeds GSC queries and results. Only
@@ -270,8 +277,8 @@ pmset -g sched                          # confirm; cancel with: sudo pmset sched
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
-| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error |
-| Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % |
+| Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited) |
+| Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate %, any page citation rate % |
 
 Sample `Checks` rows, built from the real DataForSEO and SERPHouse fixtures:
 
