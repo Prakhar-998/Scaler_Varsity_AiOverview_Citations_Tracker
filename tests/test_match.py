@@ -161,3 +161,14 @@ def test_brand_position_is_the_first_brand_reference():
         Reference("https://www.interviewbit.com/courses/y", position=3)])
     m = match_citations(r)
     assert m.brand_cited and m.brand_position == 2 and len(m.brand_urls) == 2
+
+
+def test_every_one_of_our_pages_is_recorded_once_in_order():
+    blog = "https://www.interviewbit.com/varsity/blog/fde-fees/"
+    r = SerpResult("q", "ok", shown=True, references=[
+        Reference("https://www.scaler.com/topics/x/", position=1), Reference("https://a.com/x", position=2),
+        Reference(blog, position=3), Reference("https://scaler.com/topics/x?utm_source=g", position=4),
+        Reference("https://www.interviewbit.com/courses/y", position=5)])
+    m = match_citations(r)
+    assert m.our_pages == [("https://www.scaler.com/topics/x/", 1), (blog, 3), ("https://www.interviewbit.com/courses/y", 5)]
+    assert (m.varsity_cited, m.brand_cited, m.position, m.brand_position) == (True, True, 3, 1)

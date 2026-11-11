@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from tracker.checks.base import SerpResult
 
@@ -62,6 +62,8 @@ class CitationMatch:
     brand_cited: bool = False
     brand_urls: List[str] = field(default_factory=list)
     brand_position: Optional[int] = None  # position of the first other InterviewBit/Scaler reference
+    # every Varsity/InterviewBit/Scaler page cited, in reference order, once each: (url, position)
+    our_pages: List[Tuple[str, Optional[int]]] = field(default_factory=list)
     organic_rank: Optional[int] = None  # best organic rank of any Varsity page
     # "url": a /varsity/blog/ URL was seen. "domain": only the interviewbit.com domain was visible
     # (opaque Google redirect), so it could be another interviewbit.com page. "" when not found.
@@ -71,7 +73,11 @@ class CitationMatch:
 
 def match_citations(result: SerpResult) -> CitationMatch:
     m = CitationMatch()
+    seen = set()
     for ref in result.references:
+        if (is_varsity(ref.url) or is_brand(ref.url)) and normalise_url(ref.url) not in seen:
+            seen.add(normalise_url(ref.url))
+            m.our_pages.append((ref.url, ref.position))
         if is_varsity(ref.url):
             if not m.varsity_cited:
                 m.varsity_cited, m.cited_url, m.position = True, ref.url, ref.position

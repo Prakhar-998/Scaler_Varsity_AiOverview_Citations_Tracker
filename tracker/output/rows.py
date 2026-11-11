@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK, SerpResult
 from tracker.match import CitationMatch
@@ -13,7 +13,8 @@ PROMPT_HEADERS = ["prompt", "cluster", "source", "brand tag", "intent", "score",
                   "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "device", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
-                 "error", "prompt set", "brand url", "brand position"]
+                 "error", "prompt set", "brand url", "brand position", "our pages"]
+OUR_PAGES_SEP = " | "  # "our pages": "#2 https://... | #5 https://..."
 SUMMARY_HEADERS = ["cluster", "device", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
                    "varsity citation rate %", "incomplete rate %", "brand citation rate %",
                    "any page citation rate %"]
@@ -42,7 +43,21 @@ def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: 
         m.organic_rank or "", m.rank_match, ", ".join(m.competing_domains[:10]),
         result.status, error, prompt_set,
         (m.brand_urls[0] if m.brand_urls else "") if cited_known else "", (m.brand_position or "") if cited_known else "",
+        format_our_pages(m.our_pages) if cited_known else "",
     ]
+
+
+def format_our_pages(pages: List[Tuple[str, Optional[int]]]) -> str:
+    return OUR_PAGES_SEP.join(f"#{pos or '?'} {url}" for url, pos in pages)
+
+
+def parse_our_pages(text: str) -> List[Tuple[str, Optional[int]]]:
+    out = []
+    for part in (text or "").split(OUR_PAGES_SEP):
+        pos, _, url = part.strip().partition(" ")
+        if url:
+            out.append((url, int(pos[1:]) if pos[1:].isdigit() else None))
+    return out
 
 
 def _pct(n: int, d: int) -> str:
