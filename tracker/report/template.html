@@ -158,6 +158,12 @@ footer p { margin: 0 0 6px; }
     <div id="wins"></div>
   </section>
 
+  <section aria-labelledby="h-scaler">
+    <div class="sec-head"><div><h2 id="h-scaler">Scaler.com (sister brand)</h2>
+      <p id="scaler-note"></p></div><span class="count" id="scaler-count"></span></div>
+    <div id="scaler-wins"></div>
+  </section>
+
   <section aria-labelledby="h-cluster">
     <div class="sec-head"><div><h2 id="h-cluster">By cluster</h2>
       <p>AI Overview presence, and the Varsity blog and any-page citation rates (of AI Overviews with sources), all checks of the active prompts (from every real run).</p></div></div>
@@ -295,7 +301,7 @@ footer p { margin: 0 0 6px; }
   function splitText(sp) {
     if (!sp) return "blog, program or other IB / Scaler page";
     return sp.blog + " blog · " + sp.interviewbit + " other InterviewBit · " + sp.scaler + " Scaler" +
-      (sp.not_recorded ? " · " + sp.not_recorded + " page not recorded" : "");
+      (sp.not_recorded ? " · " + sp.not_recorded + " page not recorded" : "") + " (one AIO can cite several)";
   }
   function pageType(site, kind) { return site && kind && kind !== "page not recorded" ? site + " " + kind : kind; }
   var kpis = [
@@ -470,33 +476,42 @@ footer p { margin: 0 0 6px; }
   }
   drawGaps();
 
-  // ---------- 4. wins scoreboard ----------
-  // every run of the active prompts: a run that got an answer (ok or no AI Overview) counts; a win is one
-  // of our pages (Varsity blog, other InterviewBit, Scaler) cited in it
+  // ---------- 4. wins scoreboard + Scaler ----------
+  // every run of the active prompts: a run that got an answer (ok or no AI Overview) counts. Wins are
+  // Varsity blog and other InterviewBit pages; Scaler, the sister brand, has its own board
   function lostTag() { return el("span", { class: "pill lost", title: "cited in an earlier run, not in the latest" },
     "lost in latest run"); }
+  function scoreboard(hostId, rows, pageLabel, none) {
+    var host = document.getElementById(hostId);
+    if (!rows.length) { host.appendChild(empty(none)); return; }
+    host.appendChild(table([
+      { label: "Prompt", cls: "prompt", render: function (r) {
+          var span = el("span", null, r.prompt); if (r.lost) span.appendChild(lostTag()); return span; } },
+      { label: pageLabel, cls: "domains", render: function (r) {
+          var ul = el("ul", { class: "plist" });
+          r.pages.forEach(function (pg) {
+            var li = el("li"); li.appendChild(link(pg.url, shortUrl(pg.url) || "URL not recorded"));
+            li.appendChild(el("div", { class: "muted" }, pageType(pg.site, pg.kind))); ul.appendChild(li);
+          });
+          return ul; } },
+      { label: "Best pos.", num: true, render: function (r) { return r.best_position ? "#" + r.best_position : "–"; } },
+      { label: "Cited in", num: true, render: function (r) { return r.cited_runs + " of " + r.runs + " runs"; } },
+      { label: "Last cited", render: function (r) { return r.last_cited; } },
+      { label: "Cluster", render: function (r) { return r.cluster; } }
+    ], rows));
+  }
+  function lostCount(rows) { return rows.filter(function (w) { return w.lost; }).length + " lost in latest run"; }
+  var RUN_RULE = "A run counts when it got an answer (ok or no AI Overview); most consistent first, then best position.";
+  var SW = D.scaler_wins || [];
   document.getElementById("h-wins").textContent = "Cited for " + D.wins.length + " of " + k.prompts_tracked + " tracked prompts";
-  document.getElementById("wins-note").textContent = "Wins scoreboard: every prompt one of our pages was cited for in any run, " +
-    D.wins_blog + " of them by the Varsity blog. A run counts when it got an answer (ok or no AI Overview); " +
-    "most consistent first, then best position.";
-  document.getElementById("wins-count").textContent = D.wins.filter(function (w) { return w.lost; }).length + " lost in latest run";
-  var winsHost = document.getElementById("wins");
-  if (!D.wins.length) winsHost.appendChild(empty("No Varsity / InterviewBit / Scaler citations yet."));
-  else winsHost.appendChild(table([
-    { label: "Prompt", cls: "prompt", render: function (r) {
-        var span = el("span", null, r.prompt); if (r.lost) span.appendChild(lostTag()); return span; } },
-    { label: "Varsity page cited", cls: "domains", render: function (r) {
-        var ul = el("ul", { class: "plist" });
-        r.pages.forEach(function (pg) {
-          var li = el("li"); li.appendChild(link(pg.url, shortUrl(pg.url) || "URL not recorded"));
-          li.appendChild(el("div", { class: "muted" }, pageType(pg.site, pg.kind))); ul.appendChild(li);
-        });
-        return ul; } },
-    { label: "Best pos.", num: true, render: function (r) { return r.best_position ? "#" + r.best_position : "–"; } },
-    { label: "Cited in", num: true, render: function (r) { return r.cited_runs + " of " + r.runs + " runs"; } },
-    { label: "Last cited", render: function (r) { return r.last_cited; } },
-    { label: "Cluster", render: function (r) { return r.cluster; } }
-  ], D.wins));
+  document.getElementById("wins-note").textContent = "Wins scoreboard: every prompt the Varsity blog or another InterviewBit " +
+    "page was cited for in any run, " + D.wins_blog + " of them by the blog. Scaler citations are in the next section. " + RUN_RULE;
+  document.getElementById("wins-count").textContent = lostCount(D.wins);
+  scoreboard("wins", D.wins, "Varsity / InterviewBit page cited", "No Varsity or InterviewBit citations yet.");
+  document.getElementById("scaler-note").textContent = "Cited for " + SW.length + " of " + k.prompts_tracked +
+    " tracked prompts. Not counted as wins above; an AI Overview citing both the blog and Scaler shows in both. " + RUN_RULE;
+  document.getElementById("scaler-count").textContent = lostCount(SW);
+  scoreboard("scaler-wins", SW, "Scaler page cited", "No Scaler citations yet.");
 
   // ---------- by blog ----------
   var BB = D.by_blog || { cited: [], never_cited: [] };
@@ -566,7 +581,7 @@ footer p { margin: 0 0 6px; }
     { key: "any", label: "Any page cited" },
     { key: "cited_url", label: "Cited URL", cls: "domains" },
     { key: "cited_kind", label: "Page type" },
-    { key: "cited_runs", label: "Cited in", num: true },
+    { key: "cited_runs", label: "Varsity / IB cited in", num: true },
     { key: "competitors", label: "Competitors", cls: "domains" },
     { key: "organic_rank", label: "Organic*", num: true },
     { key: "device", label: "Device" },

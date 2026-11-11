@@ -84,27 +84,36 @@ def test_wins_scoreboard_counts_every_run_per_prompt():
         row = check(p, time=time)
         row.update({"brand cited": "yes", "brand url": url, "brand position": pos})
         return row
-    S = "https://www.scaler.com/academy/fde/"
+    S, IB = "https://www.scaler.com/academy/fde/", "https://www.interviewbit.com/fde-interview-questions/"
+    both = check("g", time="09:00", cited="yes", url=V, pos="4")          # blog + Scaler, both recorded
+    both.update({"brand cited": "yes", "brand url": S, "brand position": "2", "our pages": f"#2 {S} | #4 {V}"})
     r = report([check("a", time="05:00", cited="yes", url=V, pos="6"), check("a", time="09:00", cited="yes", url=V, pos="3"),
                 check("b", time="05:00", cited="yes", url=V, pos="1"), check("b", time="09:00"),          # lost at 09:00
-                brand("c", S, "2", "05:00"), check("c", time="09:00", status="no_aio"),                  # no AIO counts as a run
+                brand("c", IB, "2", "05:00"), check("c", time="09:00", status="no_aio"),                 # no AIO counts as a run
                 check("c", time="10:00", status="incomplete"), check("c", time="11:00", status="failed"),  # these don't
                 check("d", time="05:00"), check("d", time="09:00"),                                        # never cited
-                brand("e", "", "", "05:00"), brand("e", S, "4", "09:00"), brand("f", "", "", "05:00")])  # old rows: no URL
+                brand("e", "", "", "05:00"), brand("e", S, "4", "09:00"),     # 05:00: brand page not recorded
+                check("g", time="05:00"), both])
     w = r["wins"]
-    assert [x["prompt"] for x in w] == ["a", "e", "f", "b", "c"]   # 2 of 2 first, then 1 of 2 by best position
-    a, e, f, b, c = w
-    assert [pg["url"] for pg in e["pages"]] == [S]                   # the URL-less older citation is dropped
-    assert f["pages"] == [{"url": "", "kind": "page not recorded", "site": ""}]
+    assert [x["prompt"] for x in w] == ["a", "b", "c", "g"]   # 2 of 2 first, then 1 of 2 by best position
+    a, b, c, g = w
     assert (a["cited_runs"], a["runs"], a["best_position"], a["last_cited"], a["lost"]) == (2, 2, 3, "2026-11-10 09:00", False)
     assert a["pages"] == [{"url": V, "kind": "blog", "site": "InterviewBit"}] and a["blog_runs"] == 2
     assert (b["cited_runs"], b["runs"], b["last_cited"], b["lost"]) == (1, 2, "2026-11-10 05:00", True)
-    assert (c["runs"], c["lost"], c["blog_runs"], c["pages"][0]["site"], c["pages"][0]["kind"]) == (
-        2, True, 0, "Scaler", "program page")
-    assert r["wins_blog"] == 2
+    assert (c["runs"], c["lost"], c["blog_runs"], c["pages"][0]["kind"]) == (2, True, 0, "other page")
+    assert (g["pages"], g["best_position"]) == ([{"url": V, "kind": "blog", "site": "InterviewBit"}], 4)
+    assert r["wins_blog"] == 3
+    # Scaler is its own board; the double citation shows in both, and an unrecorded page counts in neither
+    sc = {x["prompt"]: x for x in r["scaler_wins"]}
+    assert set(sc) == {"e", "g"}
+    assert (sc["e"]["cited_runs"], sc["e"]["runs"]) == (1, 1) and (sc["g"]["cited_runs"], sc["g"]["runs"]) == (1, 2)
+    assert sc["g"]["pages"] == [{"url": S, "kind": "program page", "site": "Scaler"}] and sc["g"]["best_position"] == 2
+    assert "e" not in {x["prompt"] for x in w}
+    assert r["kpis"]["any_split"] == {"blog": 4, "interviewbit": 1, "scaler": 2, "not_recorded": 1}
     rows = {p["prompt"]: p for p in r["prompts"]}
     assert (rows["b"]["cited_runs"], rows["b"]["runs"], rows["b"]["lost"]) == (1, 2, True)
     assert (rows["d"]["cited_runs"], rows["d"]["runs"]) == (0, 2)
+    assert (rows["g"]["cited_kind"], rows["g"]["any_position"]) == ("blog", 4)   # the blog is shown over Scaler
 
 
 def test_incomplete_and_no_aio_are_neither_gaps_nor_wins():
