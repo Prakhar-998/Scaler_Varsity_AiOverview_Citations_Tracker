@@ -4,17 +4,18 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK, SerpResult
-from tracker.match import CitationMatch
+from tracker.match import MATCH_LABEL, MATCH_URL, CitationMatch, OurPage, brand_site
 
 PROMPT_HEADERS = ["prompt", "cluster", "source", "brand tag", "intent", "score", "status", "reason",
                   "source inputs"]
 CHECK_HEADERS = ["date", "time", "prompt", "cluster", "device", "ai overview shown", "varsity cited", "cited url",
                  "position", "brand cited", "organic rank", "rank match", "competing domains", "check status",
-                 "error", "prompt set", "brand url", "brand position", "our pages"]
-OUR_PAGES_SEP = " | "  # "our pages": "#2 https://... | #5 https://..."
+                 "error", "prompt set", "brand url", "brand position", "our pages", "varsity match"]
+# "our pages": "#2 https://... | #4 [title] https://<matched blog> | #6 [label] Scaler page (URL hidden)"
+OUR_PAGES_SEP = " | "
 SUMMARY_HEADERS = ["cluster", "device", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
                    "varsity citation rate %", "incomplete rate %", "brand citation rate %",
                    "any page citation rate %"]
@@ -43,20 +44,29 @@ def check_row(when: datetime, prompt: str, cluster: str, result: SerpResult, m: 
         m.organic_rank or "", m.rank_match, ", ".join(m.competing_domains[:10]),
         result.status, error, prompt_set,
         (m.brand_urls[0] if m.brand_urls else "") if cited_known else "", (m.brand_position or "") if cited_known else "",
-        format_our_pages(m.our_pages) if cited_known else "",
+        format_our_pages(m.our_pages) if cited_known else "", m.varsity_match if cited_known else "",
     ]
 
 
-def format_our_pages(pages: List[Tuple[str, Optional[int]]]) -> str:
-    return OUR_PAGES_SEP.join(f"#{pos or '?'} {url}" for url, pos in pages)
+def format_our_pages(pages: List[OurPage]) -> str:
+    return OUR_PAGES_SEP.join(f"#{p.position or '?'} " + ("" if p.match == MATCH_URL else f"[{p.match}] ") + p.name
+                              for p in pages)
 
 
-def parse_our_pages(text: str) -> List[Tuple[str, Optional[int]]]:
+def parse_our_pages(text: str) -> List[OurPage]:
     out = []
     for part in (text or "").split(OUR_PAGES_SEP):
-        pos, _, url = part.strip().partition(" ")
-        if url:
-            out.append((url, int(pos[1:]) if pos[1:].isdigit() else None))
+        pos, _, rest = part.strip().partition(" ")
+        match = MATCH_URL
+        if rest.startswith("[") and "] " in rest:
+            match, rest = rest[1:].split("] ", 1)
+        if not rest:
+            continue
+        position = int(pos[1:]) if pos[1:].isdigit() else None
+        if match == MATCH_LABEL:
+            out.append(OurPage("", position, rest.split(" ", 1)[0], match))
+        else:
+            out.append(OurPage(rest, position, brand_site(rest), match))
     return out
 
 

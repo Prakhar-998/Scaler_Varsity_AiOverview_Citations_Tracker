@@ -28,7 +28,7 @@ from typing import Dict, List, Optional
 from rapidfuzz import fuzz
 
 from tracker.config import Blog, Cluster
-from tracker.match import PAGE_BLOG, brand_site, normalise_url, page_kind
+from tracker.match import MATCH_LABEL, MATCH_URL, PAGE_BLOG, brand_site, normalise_url, page_kind
 from tracker.output import parse_our_pages
 from tracker.prompts.generate import INTENT_PATTERNS, OTHER_INTENT_WEIGHT, classify_intent
 from tracker.prompts.prompt_file import prompt_set_id
@@ -177,8 +177,13 @@ SITE_IB, SITE_SCALER = "InterviewBit", "Scaler"
 NOT_RECORDED = "page not recorded"
 
 
-def _page(url: str, position: Optional[int]) -> Dict:
-    return {"url": url, "position": position, "kind": page_kind(url) or NOT_RECORDED, "site": brand_site(url)}
+URL_HIDDEN = "page (URL hidden)"
+
+
+def _page(url: str, position: Optional[int], site: str = "", match: str = MATCH_URL) -> Dict:
+    """One of our pages. A label match (hidden google.com/goto link) has a site but no URL."""
+    kind = URL_HIDDEN if match == MATCH_LABEL else page_kind(url) or NOT_RECORDED
+    return {"url": url, "position": position, "kind": kind, "site": site or brand_site(url), "match": match}
 
 
 def _pages(row: Dict[str, str]):
@@ -189,7 +194,7 @@ def _pages(row: Dict[str, str]):
         return [], False
     recorded = parse_our_pages(row.get("our pages", ""))
     if recorded:
-        return [_page(u, pos) for u, pos in recorded], False
+        return [_page(pg.url, pg.position, pg.site, pg.match) for pg in recorded], False
     out, unknown = [], False
     if row.get("varsity cited") == "yes":
         out.append(_page(row.get("cited url", ""), _int(row.get("position"))))
@@ -206,9 +211,9 @@ def _citation(row: Dict[str, str]) -> Dict:
     position first). Rows from before `brand url` was recorded know a brand page was cited but not which."""
     pages, unknown = _pages(row)
     if not pages and not unknown:
-        return {"any": row.get("varsity cited", ""), "url": "", "position": None, "kind": "", "site": ""}
+        return {"any": row.get("varsity cited", ""), "url": "", "position": None, "kind": "", "site": "", "match": ""}
     pages.sort(key=lambda p: (p["kind"] != PAGE_BLOG, p["site"] != SITE_IB, p["position"] or 99))
-    best = pages[0] if pages else {"url": "", "position": None, "kind": NOT_RECORDED, "site": ""}
+    best = pages[0] if pages else {"url": "", "position": None, "kind": NOT_RECORDED, "site": "", "match": ""}
     return dict(best, any="yes")
 
 
@@ -230,8 +235,9 @@ def _history(checks: List[Dict[str, str]], site: str) -> Dict[str, Dict]:
             continue
         runs[p][at] = runs[p].get(at, False) or bool(mine)
         for pg in mine:
-            e = pages[p].setdefault(normalise_url(pg["url"]), {"url": pg["url"], "kind": pg["kind"], "site": site,
-                                                                "runs": set()})
+            key = normalise_url(pg["url"]) if pg["url"] else pg["kind"]
+            e = pages[p].setdefault(key, {"url": pg["url"], "kind": pg["kind"], "site": site, "match": pg["match"],
+                                          "runs": set()})
             e["runs"].add(at)
             if pg["position"] is not None and (best.get(p) is None or pg["position"] < best[p]):
                 best[p] = pg["position"]
@@ -373,7 +379,8 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             c = _citation(r)
             gaps.append(dict(base, competitors=_domains(r), organic_rank=_int(r.get("organic rank")),
                              rank_match=r.get("rank match", ""), brand_cited=r.get("brand cited") == "yes",
-                             brand_url=c["url"], brand_kind=c["kind"], brand_site=c["site"], brand_position=c["position"],
+                             brand_url=c["url"], brand_kind=c["kind"], brand_site=c["site"], brand_match=c["match"],
+                             brand_position=c["position"],
                              blog_title=blog["title"], blog_url=blog["url"], blog_how=blog["how"],
                              _w=i["intent_weight"]))
     gaps.sort(key=lambda g: (-g["_w"], -g["impressions"], g["prompt"]))
@@ -399,7 +406,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                       "brand_tag": i["brand_tag"], "aio": r.get("ai overview shown", ""),
                       "varsity": r.get("varsity cited", ""), "position": _int(r.get("position")),
                       "any": c["any"], "cited_url": c["url"], "cited_kind": c["kind"], "cited_site": c["site"],
-                      "any_position": c["position"],
+                      "cited_match": c["match"], "any_position": c["position"],
                       "competitors": _domains(r), "organic_rank": _int(r.get("organic rank")),
                       "rank_match": r.get("rank match", ""), "device": r.get("device", ""),
                       "status": r.get("check status", ""), "checked_at": _checked_at(r),
@@ -410,7 +417,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             r = meta.get(p, {})
             table.append({"prompt": p, "cluster": r.get("cluster", ""), "source": r.get("source", ""),
                           "brand_tag": r.get("brand tag", ""), "aio": "", "varsity": "", "position": None,
-                          "any": "", "cited_url": "", "cited_kind": "", "cited_site": "", "any_position": None,
+                          "any": "", "cited_url": "", "cited_kind": "", "cited_site": "", "cited_match": "", "any_position": None,
                           "competitors": [], "organic_rank": None, "rank_match": "", "device": "",
                           "status": "not checked", "checked_at": "", **_runs_cited(None)})
 

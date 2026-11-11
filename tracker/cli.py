@@ -19,7 +19,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from tracker.checks import DEVICES, BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, SerpResult
@@ -214,7 +214,17 @@ def record_cost(command: str, providers: list, checks: int, calls: int, estimate
         log.info("billed: $%s on %s", billed, providers[0].name)
 
 
-def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None, prompt_set: str = ""):
+def varsity_blogs() -> list:
+    """Varsity blogs from data/private/blogs.csv, so a hidden google.com/goto reference labelled InterviewBit
+    can be matched to a blog by title. Empty (label matches only) when the file isn't there."""
+    if not DEFAULT_BLOGS.exists():
+        log.warning("no blogs file at %s; hidden InterviewBit links can't be matched to a blog by title", DEFAULT_BLOGS)
+        return []
+    return load_blogs(DEFAULT_BLOGS, load_clusters(active_only=False))
+
+
+def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None, prompt_set: str = "",
+               blogs: Sequence = ()):
     """One check per prompt on the provider's device. Stops with a warning if the budget runs out."""
     rows = []
     device = provider.device
@@ -228,7 +238,7 @@ def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[
             (raw_dir / f"{device}-{i:03d}.json").write_text(
                 json.dumps({"query": p["prompt"], "device": device, "body": result.raw}, indent=2))
         # organic rank is independent of the AI Overview, so match every non-failed check
-        m = match_citations(result) if result.status != STATUS_FAILED else None
+        m = match_citations(result, blogs) if result.status != STATUS_FAILED else None
         rows.append(check_row(when, p["prompt"], p["cluster"], result, m, device=device,
                               prompt_set=prompt_set))
     return rows
@@ -273,12 +283,12 @@ def cmd_check(args, settings) -> int:
         raw_dir = RUNS / f"raw-{stamp}"
         raw_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = []
+    rows, blogs = [], varsity_blogs()
     for provider in providers:
         if budget.remaining <= 0:
             log.warning("SERP budget used up; skipping %s", provider.device)
             continue
-        rows += run_checks(prompts, provider, now, raw_dir, prompt_set)
+        rows += run_checks(prompts, provider, now, raw_dir, prompt_set, blogs)
     writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))
@@ -298,10 +308,12 @@ def cmd_probe(args, settings) -> int:
     record_cost("probe", [provider], 1, budget.used, None if rate is None else float(rate) * budget.used)
     if args.save:
         Path(args.save).write_text(json.dumps(result.raw, indent=2))
-    m = match_citations(result)
+    m = match_citations(result, varsity_blogs())
     print(f"status: {result.status}  shown: {result.shown}  error: {result.error or '-'}")
     for r in result.references:
-        print(f"  [{r.position}] {r.url}")
+        print(f"  [{r.position}] {r.url}" + (f"  ({r.source})" if "google.com/goto" in r.url else ""))
+    for pg in m.our_pages:
+        print(f"  ours #{pg.position}: {pg.name} ({pg.site}, matched by {pg.match})")
     print(f"varsity cited: {m.varsity_cited} (pos {m.position})  brand cited: {m.brand_cited}  "
           f"organic rank: {m.organic_rank} ({m.rank_match or 'not found'})")
     return 0

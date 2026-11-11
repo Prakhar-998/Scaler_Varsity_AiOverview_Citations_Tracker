@@ -97,14 +97,21 @@ def test_check_row_records_the_brand_page_and_summary_has_any_page_rate():
     d = dict(zip(CHECK_HEADERS, check_row(WHEN, "q", "fde", r, match_citations(r))))
     assert (d["varsity cited"], d["brand cited"], d["brand url"], d["brand position"]) == (
         "no", "yes", "https://www.scaler.com/academy/fde/", 2)
-    assert d["our pages"] == "#2 https://www.scaler.com/academy/fde/"
-    summary = {(row[0], row[1]): dict(zip(SUMMARY_HEADERS, row)) for row in summarise([list(d.values())])}
+    assert d["our pages"] == "#2 https://www.scaler.com/academy/fde/" and d["varsity match"] == ""
+    ib = SerpResult("q2", STATUS_OK, shown=True, references=[Reference("https://www.interviewbit.com/courses/fde", position=1)])
+    d2 = dict(zip(CHECK_HEADERS, check_row(WHEN, "q2", "fde", ib, match_citations(ib))))
+    summary = {(row[0], row[1]): dict(zip(SUMMARY_HEADERS, row)) for row in summarise([list(d.values()), list(d2.values())])}
     assert summary[("fde", "")]["any page citation rate %"] == "100.0"
 
 
 def test_our_pages_round_trip():
+    from tracker.match import OurPage
     from tracker.output import format_our_pages, parse_our_pages
 
-    pages = [("https://www.interviewbit.com/varsity/blog/x/", 3), ("https://www.scaler.com/topics/y/", None)]
-    assert format_our_pages(pages) == "#3 https://www.interviewbit.com/varsity/blog/x/ | #? https://www.scaler.com/topics/y/"
-    assert parse_our_pages(format_our_pages(pages)) == pages and parse_our_pages("") == []
+    pages = [OurPage("https://www.interviewbit.com/varsity/blog/x/", 3, "InterviewBit"),
+             OurPage("https://www.interviewbit.com/varsity/blog/y/", 4, "InterviewBit", "title"),
+             OurPage("", 6, "Scaler", "label"), OurPage("https://www.scaler.com/topics/y/", None, "Scaler")]
+    text = format_our_pages(pages)
+    assert text == ("#3 https://www.interviewbit.com/varsity/blog/x/ | #4 [title] https://www.interviewbit.com/varsity/blog/y/"
+                    " | #6 [label] Scaler page (URL hidden) | #? https://www.scaler.com/topics/y/")
+    assert parse_our_pages(text) == pages and parse_our_pages("") == []

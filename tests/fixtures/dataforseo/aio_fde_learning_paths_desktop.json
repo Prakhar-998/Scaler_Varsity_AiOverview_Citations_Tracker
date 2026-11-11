@@ -1,0 +1,746 @@
+{
+ "version": "0.1.20261103",
+ "status_code": 20000,
+ "status_message": "Ok.",
+ "time": "5.2033 sec.",
+ "cost": 0.004,
+ "tasks_count": 1,
+ "tasks_error": 0,
+ "tasks": [
+  {
+   "id": "11110757-3089-0139-0000-a61768ccf179",
+   "status_code": 20000,
+   "status_message": "Ok.",
+   "time": "5.1320 sec.",
+   "cost": 0.004,
+   "result_count": 1,
+   "path": [
+    "v3",
+    "serp",
+    "google",
+    "organic",
+    "live",
+    "advanced"
+   ],
+   "data": {
+    "api": "serp",
+    "function": "live",
+    "se": "google",
+    "se_type": "organic",
+    "location_code": 2356,
+    "language_code": "en",
+    "device": "desktop",
+    "load_async_ai_overview": true,
+    "keyword": "help me evaluate the best online learning paths for forward deployed engineering",
+    "os": "windows"
+   },
+   "result": [
+    {
+     "keyword": "help me evaluate the best online learning paths for forward deployed engineering",
+     "type": "organic",
+     "se_domain": "google.com",
+     "location_code": 2356,
+     "language_code": "en",
+     "check_url": "https://www.google.com/search?q=help%20me%20evaluate%20the%20best%20online%20learning%20paths%20for%20forward%20deployed%20engineering&hl=en&gl=IN&ie=UTF-8&uule=w+CAIQICIFSW5kaWE",
+     "datetime": "2026-11-11 07:57:58 +00:00",
+     "spell": null,
+     "refinement_chips": null,
+     "item_types": [
+      "ai_overview",
+      "organic",
+      "video",
+      "related_searches"
+     ],
+     "se_results_count": 138,
+     "pages_count": 1,
+     "items_count": 11,
+     "items": [
+      {
+       "type": "ai_overview",
+       "rank_group": 1,
+       "rank_absolute": 1,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]",
+       "asynchronous_ai_overview": true,
+       "markdown": "Evaluating online learning paths for a **Forward Deployed Engineer (FDE)** role requires balancing core software engineering, AI/RAG application development, cloud-native deployment, and customer-facing consulting skills.[[1]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)[[2]](https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ)[[3]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)Because FDE is a hybrid, field-driven role (popularized by companies like Palantir and expanding into AI deployment), there is no single universally standardized industry certification. Instead, you should choose a learning path based on your current skill level, your preference for self-paced vs. live-cohort learning, and your budget.[[1]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)\n\n---\n\n### Top Online Learning Paths & Courses for FDE (2026)\n\n#### 1. Comprehensive & Structured Bootcamps\n\n- **AI Forward Deployed Engineer (FDE) Bootcamp (Krishna Academy / DS with BPI)** \n\t- **Format:** Live online cohort (Saturdays/Sundays)\n\t- **Focus:** Enterprise backend engineering, cloud DevOps, knowledge graphs, advanced RAG, multi-agentic AI, and client delivery.\n\t- **Best For:** Learners who prefer live instructor guidance, peer interaction, and structured weekend pacing.[[1]](https://google.com/goto?url=CAESbgHEIkXXfO0d_U-KsZhcmIudaZHuYObYIwjihAoKJaTSPHsJfYBMCkvLg0JdirQEKqz3FrU49STKO4K0nT2L0m3MrKcB0z67czObn8cep7nBKZ10o3_IoqEyoJV3gYm8ypFsiNESXY5NSaFbOwcg)\n- **Forward Deploy Engineer Mastery (SuperML)** \n\t- **Format:** Free online curriculum (14 weeks)\n\t- **Focus:** The embedded-engineer model, discovery/domain capture, on-site data plumbing, operational app building, deployment, and soft skills.\n\t- **Best For:** Zero-to-hero or budget-conscious self-starters looking for an end-to-end FDE roadmap.[[1]](https://google.com/goto?url=CAESWAHEIkXXAFk-wClRevfCHAat7DkARjwnXZr1q43F_S7eC46Ld1RYTGnK301xaJzhPzEqSH7iGDBRIsKONhWyt7-pHHRn4tHrz2wht8nClktNMSqWBwa2kR4)\n\n#### 2. Certification & Self-Paced Programs\n\n- **NovelVista Forward Deployed Engineer Course & Certification** (GSDC accredited)\n\t- **Format:** Self-paced online (USD $299, lifetime access; 13 modules)\n\t- **Focus:** FDE mindset, production Python, FastAPI/Pydantic, data pipelines, deep learning/NLP, RAG, agentic systems, UI generation (Streamlit/Gradio), and client consulting.\n\t- **Best For:** Professionals wanting a formal resume-backed GSDC certificate with structured technical modules.[[1]](https://google.com/goto?url=CAESeAHEIkXXQIjP7tSAxJ4fj9KvmpdczsXuB7onTxV1UaXJg5oUzPe7VgvMvJsG4QlIjcV8TAJYzUznRt1dKA1UbJdiAN5f3DRtinqsUc8CXYYjE10RRqx1WifZSlrpXN8SGmnt-NDS2uMY-CFtMnMxQEqS2cAmxxvBYA)\n- **Koenig Solutions – Forward Deployed Engineer (Koenig Original)** \n\t- **Format:** Instructor-led online with cloud-based labs\n\t- **Focus:** Azure cloud administration (bridging AZ-104 concepts) combined with FastAPI, LangChain, vector databases, and full-stack AI deployment.\n\t- **Best For:** Azure-centric enterprise engineers pivoting into applied AI deployment.[[1]](https://google.com/goto?url=CAESeQHEIkXXERyty4A3jPIvalACLIf5XHsZ3GwlRNaguDEeVrbeM56C8VQ9qULD2KuVLk6HVy9j1knatie821-dO3PQObKJOc7_acw2e1zkUEtgBPOGCJvZrAEOD00rgh--cDJOPQHcpPr0vZr6Vr68h-kGZG2zOWKwmLs)\n\n#### 3. Modular Technical Foundation Tracks\n\n- **DataCamp (Python for Software Engineering & AI Engineer for Developers)** \n\t- **Format:** Self-paced hands-on labs (approx. 32 + 29 hours)\n\t- **Focus:** Object-oriented programming, data structures, algorithms, and a practical 4-hour AI engineering certification exam.\n\t- **Best For:** Building clean, tested Python and AI application skills before moving into client-facing architecture.[[1]](https://google.com/goto?url=CAESbgHEIkXXC7XcdMoHzo8prMgwYUJ48wrTCe1C4A41nhgaS1iTbETUJT284FnZdkpZzkHWfChtrQI3NVUUBaSEqqHsgtqgB8soFQ5co1a9uAf9gTC_95qyczuYTOUE30uYiMI6B5E3Ik3vNZVupK9i)\n- **IIT Bombay Certificate in AI Engineering and MLOps (via Great Learning)** \n\t- **Format:** 5-month online program\n\t- **Focus:** Distributed ML systems, high-performance computing, large-model training, and enterprise MLOps.\n\t- **Best For:** Deep technical infrastructure grounding for heavy enterprise AI deployments.[[1]](https://google.com/goto?url=CAESfwHEIkXXogkfIy6AbPRlxoH2pcNGxsR_RWT52Vdtda_XwvmVfdhECiK1uV5VJjriIpHZk9hJ0QsgOTezRxQR6EQWqD2f84ln4Nm_KCkvC9fx-xwqKEWtAcdQCPj7emDQjYrtK_OPsNKdrX0vLJxLKQK_E6rN2x71p3aq4dy1qCg)\n\n\n\n---\n\n### Core Pillars a Good FDE Path Must Cover\nNo matter which path you pick, ensure it trains you across four key buckets:[[1]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)\n\n1. **Production Software & APIs:** Python, clean code, FastAPI, Docker, and system/API orchestration (REST, gRPC).\n2. **AI & Data Plumbing:** RAG pipelines, vector databases (Pinecone, Milvus), LLM evaluation, and connecting to messy legacy databases (SQL, air-gapped VPCs).\n3. **Cloud & MLOps:** Containerization, CI/CD, logging, monitoring, and cloud platforms (AWS, Azure, or GCP).\n4. **Customer Discovery & Consulting:** Translating vague client problem statements (\"we want to talk to our data\") into scoped, shippable Minimum Viable Products (MVPs).[[1]](https://google.com/goto?url=CAESbgHEIkXXrksT0WDT9ZPXtzr36rQV9jvbPI1_AVVshPqI-wqrgTtVP2k-_xDSQI3E9gOnyUSqq1-s13QSCjlaX8I9Vh7jQLgucAZO4ClhIx4e8YIp1LjMX6Rux7ZAjZjjhlVZmV6pYDSdv_r7XFwV)[[2]](https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ)[[3]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)[[4]](https://google.com/goto?url=CAESbgHEIkXXeoztv5DaLcu96cjpJOWhnRAVAP7qjMAPxGwk8xtgVjg83DvDSsLvzqzoygbLh8TuqSpZC9-3GdrfjulEfEI06pS9Pbcdpslahf4JXsrMRscrktT9bAsr7VGkYh74WOpVhp1ngWkfR_6O)[[5]](https://google.com/goto?url=CAESfwHEIkXXogkfIy6AbPRlxoH2pcNGxsR_RWT52Vdtda_XwvmVfdhECiK1uV5VJjriIpHZk9hJ0QsgOTezRxQR6EQWqD2f84ln4Nm_KCkvC9fx-xwqKEWtAcdQCPj7emDQjYrtK_OPsNKdrX0vLJxLKQK_E6rN2x71p3aq4dy1qCg)[[6]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)\n\nTo help narrow down the best choice for you, let me know:\n\n- What is your **current technical background** (e.g., software dev, data science, IT/cloud)?\n- Do you prefer **self-paced independent study** or **live cohort classes**?\n- Are you aiming to build skills for a **specific industry** (like AI startups, defense, or enterprise SaaS)?",
+       "items": [
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": null,
+         "text": "Evaluating online learning paths for a Forward Deployed Engineer (FDE) role requires balancing core software engineering, AI/RAG application development, cloud-native deployment, and customer-facing consulting skills.",
+         "markdown": "Evaluating online learning paths for a **Forward Deployed Engineer (FDE)** role requires balancing core software engineering, AI/RAG application development, cloud-native deployment, and customer-facing consulting skills.[[1]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)[[2]](https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ)[[3]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "FDE Academy",
+           "domain": "fde.academy",
+           "url": "https://fde.academy/blog/forward-deployed-engineer-certification",
+           "title": "Forward Deployed Engineer Certification: Best Options & Guide",
+           "text": "Forward Deployed Engineer Certification: Best Options & Guide Is There a Forward Deployed Engineer Certification Worth Getting? ex..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Scaler",
+           "domain": "google.com",
+           "url": "https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ",
+           "title": "Forward Deployed Engineer Skills 2026 | The Technical & Customer-Facing Skills You Need'",
+           "text": "Technical Core: Advanced DSA, system design, polyglot coding, API orchestration (REST to gRPC, auth flows), technical archaeology ..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Simpliaxis",
+           "domain": "www.simpliaxis.com",
+           "url": "https://www.simpliaxis.com/resources/forward-deployed-engineer-course",
+           "title": "Best Forward Deployed Engineer Course: Skills & Roadmap ...",
+           "text": "A good forward deployed engineer course needs to cover four things in sequence: Python and AI/ML foundations, RAG and AI agent dev..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": null,
+         "text": "Because FDE is a hybrid, field-driven role (popularized by companies like Palantir and expanding into AI deployment), there is no single universally standardized industry certification. Instead, you should choose a learning path based on your current skill level, your preference for self-paced vs. live-cohort learning, and your budget.",
+         "markdown": "Because FDE is a hybrid, field-driven role (popularized by companies like Palantir and expanding into AI deployment), there is no single universally standardized industry certification. Instead, you should choose a learning path based on your current skill level, your preference for self-paced vs. live-cohort learning, and your budget.[[1]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "FDE Academy",
+           "domain": "fde.academy",
+           "url": "https://fde.academy/blog/forward-deployed-engineer-certification",
+           "title": "Forward Deployed Engineer Certification: Best Options & Guide",
+           "text": "Forward Deployed Engineer Certification: Best Options & Guide Is There a Forward Deployed Engineer Certification Worth Getting? explores whether certifications act..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": "Top Online Learning Paths & Courses for FDE (2026)",
+         "text": null,
+         "markdown": "### Top Online Learning Paths & Courses for FDE (2026)",
+         "links": null,
+         "images": null,
+         "references": null
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": "1. Comprehensive & Structured Bootcamps",
+         "text": "AI Forward Deployed Engineer (FDE) Bootcamp (Krishna Academy / DS with BPI) Format: Live online cohort (Saturdays/Sundays) Focus: Enterprise backend engineering, cloud DevOps, knowledge graphs, advanced RAG, multi-agentic AI, and client delivery. Best For: Learners who prefer live instructor guidance, peer interaction, and structured weekend pacing. Forward Deploy Engineer Mastery (SuperML) Format: Free online curriculum (14 weeks) Focus: The embedded-engineer model, discovery/domain capture, on-site data plumbing, operational app building, deployment, and soft skills. Best For: Zero-to-hero or budget-conscious self-starters looking for an end-to-end FDE roadmap.",
+         "markdown": "- **AI Forward Deployed Engineer (FDE) Bootcamp (Krishna Academy / DS with BPI)** \n\t- **Format:** Live online cohort (Saturdays/Sundays)\n\t- **Focus:** Enterprise backend engineering, cloud DevOps, knowledge graphs, advanced RAG, multi-agentic AI, and client delivery.\n\t- **Best For:** Learners who prefer live instructor guidance, peer interaction, and structured weekend pacing.[[1]](https://google.com/goto?url=CAESbgHEIkXXfO0d_U-KsZhcmIudaZHuYObYIwjihAoKJaTSPHsJfYBMCkvLg0JdirQEKqz3FrU49STKO4K0nT2L0m3MrKcB0z67czObn8cep7nBKZ10o3_IoqEyoJV3gYm8ypFsiNESXY5NSaFbOwcg)\n- **Forward Deploy Engineer Mastery (SuperML)** \n\t- **Format:** Free online curriculum (14 weeks)\n\t- **Focus:** The embedded-engineer model, discovery/domain capture, on-site data plumbing, operational app building, deployment, and soft skills.\n\t- **Best For:** Zero-to-hero or budget-conscious self-starters looking for an end-to-end FDE roadmap.[[1]](https://google.com/goto?url=CAESWAHEIkXXAFk-wClRevfCHAat7DkARjwnXZr1q43F_S7eC46Ld1RYTGnK301xaJzhPzEqSH7iGDBRIsKONhWyt7-pHHRn4tHrz2wht8nClktNMSqWBwa2kR4)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "YouTube",
+           "domain": "www.youtube.com",
+           "url": "https://www.youtube.com/watch?v=hNDdmb_2XyQ&t=671",
+           "title": "AI Forward Deployed Engineer (FDE) Bootcamp @krishnaik06",
+           "text": "AI Forward Deployed Engineer (FDE) Bootcamp @krishnaik06 system then knowledge aware answer with the rag. system integration with ..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "superml.org",
+           "domain": "superml.org",
+           "url": "https://superml.org/courses",
+           "title": "Free AI and Machine Learning Education",
+           "text": "AI & ML Learning Paths * ⚡ intermediate ⭐ Featured RAG From Scratch: Chunking, Embedding, Retrieval, and Evaluation Build a produc..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": "2. Certification & Self-Paced Programs",
+         "text": "NovelVista Forward Deployed Engineer Course & Certification (GSDC accredited) Format: Self-paced online (USD $299, lifetime access; 13 modules) Focus: FDE mindset, production Python, FastAPI/Pydantic, data pipelines, deep learning/NLP, RAG, agentic systems, UI generation (Streamlit/Gradio), and client consulting. Best For: Professionals wanting a formal resume-backed GSDC certificate with structured technical modules. Koenig Solutions – Forward Deployed Engineer (Koenig Original) Format: Instructor-led online with cloud-based labs Focus: Azure cloud administration (bridging AZ-104 concepts) combined with FastAPI, LangChain, vector databases, and full-stack AI deployment. Best For: Azure-centric enterprise engineers pivoting into applied AI deployment.",
+         "markdown": "- **NovelVista Forward Deployed Engineer Course & Certification** (GSDC accredited)\n\t- **Format:** Self-paced online (USD $299, lifetime access; 13 modules)\n\t- **Focus:** FDE mindset, production Python, FastAPI/Pydantic, data pipelines, deep learning/NLP, RAG, agentic systems, UI generation (Streamlit/Gradio), and client consulting.\n\t- **Best For:** Professionals wanting a formal resume-backed GSDC certificate with structured technical modules.[[1]](https://google.com/goto?url=CAESeAHEIkXXQIjP7tSAxJ4fj9KvmpdczsXuB7onTxV1UaXJg5oUzPe7VgvMvJsG4QlIjcV8TAJYzUznRt1dKA1UbJdiAN5f3DRtinqsUc8CXYYjE10RRqx1WifZSlrpXN8SGmnt-NDS2uMY-CFtMnMxQEqS2cAmxxvBYA)\n- **Koenig Solutions – Forward Deployed Engineer (Koenig Original)** \n\t- **Format:** Instructor-led online with cloud-based labs\n\t- **Focus:** Azure cloud administration (bridging AZ-104 concepts) combined with FastAPI, LangChain, vector databases, and full-stack AI deployment.\n\t- **Best For:** Azure-centric enterprise engineers pivoting into applied AI deployment.[[1]](https://google.com/goto?url=CAESeQHEIkXXERyty4A3jPIvalACLIf5XHsZ3GwlRNaguDEeVrbeM56C8VQ9qULD2KuVLk6HVy9j1knatie821-dO3PQObKJOc7_acw2e1zkUEtgBPOGCJvZrAEOD00rgh--cDJOPQHcpPr0vZr6Vr68h-kGZG2zOWKwmLs)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "NovelVista",
+           "domain": "www.novelvista.com",
+           "url": "https://www.novelvista.com/forward-deployed-engineer-course",
+           "title": "Forward Deployed Engineer Course (FDE) | AI Training",
+           "text": "Course: Forward Deployed Engineer Course & Certification by NovelVista (GSDC accredited, USD 299 self-paced, lifetime access). Aud..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Koenig-solutions.com",
+           "domain": "www.koenig-solutions.com",
+           "url": "https://www.koenig-solutions.com/online-engineering-programs",
+           "title": "Forward Deployed Engineer Training - Koenig",
+           "text": "Course Overview The Forward Deployed Engineer (Koenig Original) by Koenig Original is designed for engineers and architects master..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": "3. Modular Technical Foundation Tracks",
+         "text": "DataCamp (Python for Software Engineering & AI Engineer for Developers) Format: Self-paced hands-on labs (approx. 32 + 29 hours) Focus: Object-oriented programming, data structures, algorithms, and a practical 4-hour AI engineering certification exam. Best For: Building clean, tested Python and AI application skills before moving into client-facing architecture. IIT Bombay Certificate in AI Engineering and MLOps (via Great Learning) Format: 5-month online program Focus: Distributed ML systems, high-performance computing, large-model training, and enterprise MLOps. Best For: Deep technical infrastructure grounding for heavy enterprise AI deployments.",
+         "markdown": "- **DataCamp (Python for Software Engineering & AI Engineer for Developers)** \n\t- **Format:** Self-paced hands-on labs (approx. 32 + 29 hours)\n\t- **Focus:** Object-oriented programming, data structures, algorithms, and a practical 4-hour AI engineering certification exam.\n\t- **Best For:** Building clean, tested Python and AI application skills before moving into client-facing architecture.[[1]](https://google.com/goto?url=CAESbgHEIkXXC7XcdMoHzo8prMgwYUJ48wrTCe1C4A41nhgaS1iTbETUJT284FnZdkpZzkHWfChtrQI3NVUUBaSEqqHsgtqgB8soFQ5co1a9uAf9gTC_95qyczuYTOUE30uYiMI6B5E3Ik3vNZVupK9i)\n- **IIT Bombay Certificate in AI Engineering and MLOps (via Great Learning)** \n\t- **Format:** 5-month online program\n\t- **Focus:** Distributed ML systems, high-performance computing, large-model training, and enterprise MLOps.\n\t- **Best For:** Deep technical infrastructure grounding for heavy enterprise AI deployments.[[1]](https://google.com/goto?url=CAESfwHEIkXXogkfIy6AbPRlxoH2pcNGxsR_RWT52Vdtda_XwvmVfdhECiK1uV5VJjriIpHZk9hJ0QsgOTezRxQR6EQWqD2f84ln4Nm_KCkvC9fx-xwqKEWtAcdQCPj7emDQjYrtK_OPsNKdrX0vLJxLKQK_E6rN2x71p3aq4dy1qCg)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "YouTube",
+           "domain": "www.youtube.com",
+           "url": "https://www.youtube.com/watch?v=vLlIBT0HSSc&t=305",
+           "title": "How to Become a Forward Deployed Engineer in 2026",
+           "text": "How to Become a Forward Deployed Engineer in 2026 and that's the gap here but it's also the opportunity. so I'm going to show you ..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Great Learning",
+           "domain": "www.mygreatlearning.com",
+           "url": "https://www.mygreatlearning.com/blog/forward-deployed-engineering/",
+           "title": "What Is Forward Deployed Engineering? - Great Learning",
+           "text": "Programming: Python, JavaScript, or TypeScript for building applications, backend services, scripts, and automation workflows. Eng..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": "Core Pillars a Good FDE Path Must Cover",
+         "text": "No matter which path you pick, ensure it trains you across four key buckets:",
+         "markdown": "No matter which path you pick, ensure it trains you across four key buckets:[[1]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Simpliaxis",
+           "domain": "www.simpliaxis.com",
+           "url": "https://www.simpliaxis.com/resources/forward-deployed-engineer-course",
+           "title": "Best Forward Deployed Engineer Course: Skills & Roadmap ...",
+           "text": "A good forward deployed engineer course needs to cover four things in sequence: Python and AI/ML foundations, RAG and AI agent development with frameworks like Lan..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": null,
+         "text": "Production Software & APIs: Python, clean code, FastAPI, Docker, and system/API orchestration (REST, gRPC). AI & Data Plumbing: RAG pipelines, vector databases (Pinecone, Milvus), LLM evaluation, and connecting to messy legacy databases (SQL, air-gapped VPCs). Cloud & MLOps: Containerization, CI/CD, logging, monitoring, and cloud platforms (AWS, Azure, or GCP). Customer Discovery & Consulting: Translating vague client problem statements (\"we want to talk to our data\") into scoped, shippable Minimum Viable Products (MVPs).",
+         "markdown": "1. **Production Software & APIs:** Python, clean code, FastAPI, Docker, and system/API orchestration (REST, gRPC).\n2. **AI & Data Plumbing:** RAG pipelines, vector databases (Pinecone, Milvus), LLM evaluation, and connecting to messy legacy databases (SQL, air-gapped VPCs).\n3. **Cloud & MLOps:** Containerization, CI/CD, logging, monitoring, and cloud platforms (AWS, Azure, or GCP).\n4. **Customer Discovery & Consulting:** Translating vague client problem statements (\"we want to talk to our data\") into scoped, shippable Minimum Viable Products (MVPs).[[1]](https://google.com/goto?url=CAESbgHEIkXXrksT0WDT9ZPXtzr36rQV9jvbPI1_AVVshPqI-wqrgTtVP2k-_xDSQI3E9gOnyUSqq1-s13QSCjlaX8I9Vh7jQLgucAZO4ClhIx4e8YIp1LjMX6Rux7ZAjZjjhlVZmV6pYDSdv_r7XFwV)[[2]](https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ)[[3]](https://google.com/goto?url=CAESggEBxCJF14sgA8TrVBegnyWebt82WRDnSjb5Qnsu-hPZzX09TTGo2aDfg2rc81ytpm-NdJQLl9qzzF6XMPS6TXFa5Bk28Qd_4qd9bfXchbQPf3DJ7EzDZed7glLaBmbb8d7S611NraHh7dxAPtzADrjdGKrvgtHACOz8AAj3dfY8fxBi)[[4]](https://google.com/goto?url=CAESbgHEIkXXeoztv5DaLcu96cjpJOWhnRAVAP7qjMAPxGwk8xtgVjg83DvDSsLvzqzoygbLh8TuqSpZC9-3GdrfjulEfEI06pS9Pbcdpslahf4JXsrMRscrktT9bAsr7VGkYh74WOpVhp1ngWkfR_6O)[[5]](https://google.com/goto?url=CAESfwHEIkXXogkfIy6AbPRlxoH2pcNGxsR_RWT52Vdtda_XwvmVfdhECiK1uV5VJjriIpHZk9hJ0QsgOTezRxQR6EQWqD2f84ln4Nm_KCkvC9fx-xwqKEWtAcdQCPj7emDQjYrtK_OPsNKdrX0vLJxLKQK_E6rN2x71p3aq4dy1qCg)[[6]](https://google.com/goto?url=CAESfQHEIkXXOMxKRY_ugvq2cUVKcZEOighI-etwu0C5wdG54aPjnTnh1lE32SnYGwQJxFimtpm4xKsAssN_Wz2ecfN8YjKkdZzSThgBBqjCKgGDHeFajNfDTDibY2g5PeYHcVTTkn0KMmWjme5yUl1oQTa5WG4-DR9a5D3yNxxS)",
+         "links": null,
+         "images": null,
+         "references": [
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "YouTube",
+           "domain": "www.youtube.com",
+           "url": "https://www.youtube.com/watch?v=FSZhPDzESPU&t=313",
+           "title": "Complete End To End AI Forward Deployed Engineer(FDE) ...",
+           "text": "Complete End To End AI Forward Deployed Engineer(FDE) Project Implementation at least we'll keep a like target of thousand. so ple..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Scaler",
+           "domain": "google.com",
+           "url": "https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ",
+           "title": "Forward Deployed Engineer Skills 2026 | The Technical & Customer-Facing Skills You Need'",
+           "text": "Technical Core: Advanced DSA, system design, polyglot coding, API orchestration (REST to gRPC, auth flows), technical archaeology (legacy shimming for old mainfram..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Simpliaxis",
+           "domain": "www.simpliaxis.com",
+           "url": "https://www.simpliaxis.com/resources/forward-deployed-engineer-course",
+           "title": "Best Forward Deployed Engineer Course: Skills & Roadmap ...",
+           "text": "A good forward deployed engineer course needs to cover four things in sequence: Python and AI/ML foundations, RAG and AI agent development with frameworks like Lan..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "YouTube",
+           "domain": "google.com",
+           "url": "https://google.com/goto?url=CAESbgHEIkXXeoztv5DaLcu96cjpJOWhnRAVAP7qjMAPxGwk8xtgVjg83DvDSsLvzqzoygbLh8TuqSpZC9-3GdrfjulEfEI06pS9Pbcdpslahf4JXsrMRscrktT9bAsr7VGkYh74WOpVhp1ngWkfR_6O",
+           "title": "Complete AI Forward Deployed Engineer(FDE) Roadmap With ...",
+           "text": "Complete AI Forward Deployed Engineer(FDE) Roadmap With Usecases because business analyst product engineer you need to keep on tal..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "Great Learning",
+           "domain": "www.mygreatlearning.com",
+           "url": "https://www.mygreatlearning.com/blog/forward-deployed-engineering/",
+           "title": "What Is Forward Deployed Engineering? - Great Learning",
+           "text": "Programming: Python, JavaScript, or TypeScript for building applications, backend services, scripts, and automation workflows. Eng..."
+          },
+          {
+           "type": "ai_overview_reference",
+           "position": "left",
+           "source": "FDE Academy",
+           "domain": "fde.academy",
+           "url": "https://fde.academy/blog/forward-deployed-engineer-certification",
+           "title": "Forward Deployed Engineer Certification: Best Options & Guide",
+           "text": "Forward Deployed Engineer Certification: Best Options & Guide Is There a Forward Deployed Engineer Certification Worth Getting? explores whether certifications act..."
+          }
+         ]
+        },
+        {
+         "type": "ai_overview_element",
+         "position": "left",
+         "title": null,
+         "text": "To help narrow down the best choice for you, let me know:What is your current technical background (e.g., software dev, data science, IT/cloud)?\nDo you prefer self-paced independent study or live cohort classes ?\nAre you aiming to build skills for a specific industry (like AI startups, defense, or enterprise SaaS)?",
+         "markdown": "To help narrow down the best choice for you, let me know:\n\n- What is your **current technical background** (e.g., software dev, data science, IT/cloud)?\n- Do you prefer **self-paced independent study** or **live cohort classes**?\n- Are you aiming to build skills for a **specific industry** (like AI startups, defense, or enterprise SaaS)?",
+         "links": null,
+         "images": null,
+         "references": null
+        }
+       ],
+       "references": [
+        {
+         "type": "ai_overview_reference",
+         "position": "right",
+         "source": "FDE Academy",
+         "domain": "fde.academy",
+         "url": "https://fde.academy/blog/forward-deployed-engineer-certification",
+         "title": "Forward Deployed Engineer Certification: Best Options & Guide",
+         "text": "Forward Deployed Engineer Certification: Best Options & Guide Is There a Forward Deployed Engineer Certification Worth Getting? explores whether certifications act..."
+        },
+        {
+         "type": "ai_overview_reference",
+         "position": "right",
+         "source": "Simpliaxis",
+         "domain": "www.simpliaxis.com",
+         "url": "https://www.simpliaxis.com/resources/forward-deployed-engineer-course",
+         "title": "Best Forward Deployed Engineer Course: Skills & Roadmap ...",
+         "text": "A good forward deployed engineer course needs to cover four things in sequence: Python and AI/ML foundations, RAG and AI agent development with frameworks like Lan..."
+        },
+        {
+         "type": "ai_overview_reference",
+         "position": "right",
+         "source": "Scaler",
+         "domain": "google.com",
+         "url": "https://google.com/goto?url=CAESfAHEIkXXYkwp9Dtq6dw_IerFYMvZhud_cRA_PBAj3KytNqtj1K5F3P7fyKHRKqhs_EVx885-cwFQGhMqnQdpbo7YaPCTVfkWQujAbVkc2Php-2qLLjS8HSguv6_VEOQXeopk18v3MWk4xDyRSEaqyggokaYzhrDPpqIAeOQ",
+         "title": "Forward Deployed Engineer Skills 2026 | The Technical & Customer-Facing Skills You Need'",
+         "text": "Technical Core: Advanced DSA, system design, polyglot coding, API orchestration (REST to gRPC, auth flows), technical archaeology (legacy shimming for old mainfram..."
+        }
+       ],
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 1,
+       "rank_absolute": 2,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[3]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Forward Deployed Engineer Certification: Best Options & ...",
+       "url": "https://google.com/goto?url=CAESfQHEIkXXXDIpklyc19fznPPXsZ9z0jyWhQeaON0iK_kZBteOjGv2K28QUAjm8AUdYxAf6gDRjfwQPglP__7VvQzYKFykaTEB22GAFz5D-FYgxNCda7q4aKR8kakKycutMhI4IvRWozdgN65S0Q8f75f3y4MZK-nTArPMY0Zk&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://fde.academy › blog › forward-deployed-enginee...",
+       "website_name": "FDE Academy",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "9 Jul 2026 — Explore Forward Deployed Engineer certification options, courses, skills, costs, and what employers value when hiring FDEs.",
+       "pre_snippet": "07/09/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "Explore Forward Deployed Engineer certification options"
+       ],
+       "links": null,
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-07-09 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "video",
+       "rank_group": 1,
+       "rank_absolute": 3,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[5]/div[1]",
+       "items": [
+        {
+         "type": "video_element",
+         "source": "YouTube · Coder Army",
+         "title": "Forward Deployed Engineering Full Course",
+         "timestamp": "2026-09-07 00:00:00 +00:00",
+         "url": "https://www.youtube.com/watch?v=kBM5UXRbo3U"
+        },
+        {
+         "type": "video_element",
+         "source": "YouTube · Krish Naik",
+         "title": "Complete End To End AI Forward Deployed Engineer(FDE) ...",
+         "timestamp": "2026-09-10 00:00:00 +00:00",
+         "url": "https://www.youtube.com/watch?v=FSZhPDzESPU"
+        },
+        {
+         "type": "video_element",
+         "source": "YouTube · Visualpath Pro",
+         "title": "Forward Deployed Engineer (FDE) Training || Online Demo By ...",
+         "timestamp": "2026-10-28 07:57:54 +00:00",
+         "url": "https://www.youtube.com/watch?v=NAV8Y49Q-1Q"
+        }
+       ],
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 2,
+       "rank_absolute": 4,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[7]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Forward Deployed Engineer Skills 2026 | The Technical & ...",
+       "url": "https://google.com/goto?url=CAESfAHEIkXXiwrJuVKnGKxjdvimTmj-7Oh_7mFkkHjLYCoYwDVQUA6k0QyUThCvW0uldvwY5vtfU9bw6fFcb-eRpu0gR3eAyhBRJu3TEdcgbeF7RTt9gwb68wD3YtS94X-hbd2yJhUXHiu6L1WfG2qHDS1k75xHy2q3uaYNNgA&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://www.scaler.com › Topics",
+       "website_name": "Scaler",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "5 Oct 2026 — Explore the key Forward Deployed Engineer skills for 2026, from coding and AI to problem-solving, communication, and customer-facing ...",
+       "pre_snippet": "10/05/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "Explore the key Forward Deployed Engineer skills for 2026"
+       ],
+       "links": null,
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-10-05 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 3,
+       "rank_absolute": 5,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[9]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Forward Deployed Engineer Learning Path",
+       "url": "https://google.com/goto?url=CAESjwEBxCJF15Gax5hXBEhsysVwtNQSar-Z4S_EVdP3QesR7tvMGoWejEiFNSVxRBjiaYputXFxH-WKEIaRTSf7MhtzBtU9AlQd3QMxX9SJpNklfjBduOuh7fc_FLi0NOl33BecRzBgER3uVvyuU3486JQXqGq1nQXGo7ykOeo7Bl_VFZT0GMWZdHEjpv_BS9OGZA&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://www.interviewbit.com › varsity › blog › forward-...",
+       "website_name": "InterviewBit",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "3 Oct 2026 — A forward deployed engineer learning path is a six-stage plan for building the skills that let you ship production AI systems inside a ... Read more",
+       "pre_snippet": "10/03/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "forward deployed engineer learning path"
+       ],
+       "links": [
+        {
+         "type": "link_element",
+         "title": "Read more",
+         "description": null,
+         "url": "https://google.com/goto?url=CAES9gEBxCJF1wyWL7YZ6eXHAPXyj8wA15mV2iLrKZ-U_pPfvndqgRH-rtMUNQuQMcHlgsICa_l6otvIJ8RtxyFko8FbWkDQnmyg5-194HlYp92R8OL63Fd7fijj6c-i3V52FpNB3MdyNQDRTlT1YteO1QF_KCB2nq4GibPdYHoxeZoTZpF2lu-9Tv6cD-qQ4m2JvbTT_CqdDH3RssdOA1mUoTOaXkZoXmzXapuZO1A5-F7rBRT79YM2he6IQ2mS74_v9kzNux_t8HZDx1p34lsBBp1xUdNVl_0eszcPX3FJe6pxj28g9bEaPKkINBSCFfXFKVWOEFaIvWI&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+         "domain": "google.com"
+        }
+       ],
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-10-03 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 4,
+       "rank_absolute": 6,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[11]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "What Is Forward Deployed Engineering?",
+       "url": "https://google.com/goto?url=CAESfwHEIkXXu4hd_bXm5a67bQdN3MC_cDl6TLDDPZZGXm4Bz8kDTpPAcUrBZ7N9Axse1evm85lXOwuO9TfglYD5k2lZb--ff96JJb1EF5lyMRIjpyPafJDXZBEsaGRFu0ClRl7ZsYHcpyzccGnk1P7zqppAh42n8PAhrDMrbHewLPo&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://www.mygreatlearning.com › blog › forward-dep...",
+       "website_name": "Great Learning",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "15 Oct 2026 — Forward Deployed Engineering connects implementation, evaluation, and continuous improvement. These stages are iterative rather than ... Read more",
+       "pre_snippet": "10/15/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "Forward Deployed Engineering",
+        "evaluation"
+       ],
+       "links": [
+        {
+         "type": "link_element",
+         "title": "Read more",
+         "description": null,
+         "url": "https://google.com/goto?url=CAES-wEBxCJF1_TxAd93rsaAUfI1mkZZdEWflxnVdMeE6tnEiSJNQojpa1erwK1XMO64weHVl9YXolCu-8U3kRhJbkAf1kb2V7-jpAIwBg5DfrCUUtxt7RI_euYVL7PyRMvM0G94QtJZKNrlPZ4qhMO-ohZibL5-vh33_07R_RX0KSPQuBnNGshW3zBAK9j69cXnpYjoepTDYAX1mjV_s9kBNWzFN2Hn_qwH86A0BHx7NTte6M3mIEYvKWKESs_M4zWM0xMIdv2Kz4Eka7x3aZOil1LhYXYMy4Fs4Uut42R_i_-1Q7dxVCXcnJxcHsPeH26JiR7iJ2fZfRL9Ls26-A&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+         "domain": "google.com"
+        }
+       ],
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-10-15 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 5,
+       "rank_absolute": 7,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[12]/div[1]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "AI Forward Deployed Engineer (FDE) Bootcamp @krishnaik06",
+       "url": "https://google.com/goto?url=CAESaAHEIkXXiaHinBIeDPHzJXdPrqtiCstOM1DKW3BYjCusK-AxTllREZDoXjmKavO4k0Rg6YEZ7iS0KQEk7pMkL6hfFvIvhbfWTv1iVIeuNlR2cCQzD850d9Lrf9mKb91XKblz18adY51k&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "9.4K+ views  ·  1 month ago",
+       "website_name": "YouTube · DSwithBappy",
+       "is_image": false,
+       "is_video": true,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": [
+        "is_video"
+       ],
+       "description": "Artificial Intelligence, Machine Learning, Deep Learning, Computer Vision, provide inspiration, motivation & good quality education to students ...",
+       "pre_snippet": null,
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "Learning",
+        "good",
+        "education"
+       ],
+       "links": null,
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-09-12 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 6,
+       "rank_absolute": 8,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[14]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Best Forward Deployed Engineer Course: Roadmap, Skills ...",
+       "url": "https://google.com/goto?url=CAESggEBxCJF1-LNk7N10FQqAuzPoCOhlaDhkpA_3rPI8K0KONjt6q7axy0RYZam_cUbpgbRz5Ta1eXYgwho1zBMXKCh1iqmRY9FWg5iyLmX0d6hC7tBUMA-6rWfFKW4PiR7HdIKPXVuCxafaWeNNkK1xVwNCzzQDpryBmZDdiRGziVbnlo_&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://www.simpliaxis.com › resources › forward-depl...",
+       "website_name": "Simpliaxis",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "18 Sept 2026 — A good forward deployed engineer course needs to cover four things in sequence: Python and AI/ML foundations, RAG and AI agent development ... Read more",
+       "pre_snippet": "09/18/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "good forward deployed engineer course"
+       ],
+       "links": [
+        {
+         "type": "link_element",
+         "title": "Read more",
+         "description": null,
+         "url": "https://google.com/goto?url=CAES2QEBxCJF16a1ntem1euEZcd9j5QyopEqLPRVVwg8RQOw4O-NTNtj6QQtNrRQSgc1e5F8-vlsOeGBvxwpIXbaxEhsXYncB0TRVF1_si1BCVSTHGzndNstAXOiDPZRvMukH4EpsWnLMSEBt_90r40yoV2AiT4QHVTqRMg-uBQY7rG0R8Y0BCwn-HywhBMPyAPYaFLeN9sN46vJ6a1vTi2a9Mb5e9ZHc-XVi6IQsfJsE8rju3KYHqzDpbf33zZl7Vr1cneG-_Rbv88L18mhruxXSpWESnta6Nac_ILe&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+         "domain": "google.com"
+        }
+       ],
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-09-18 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 7,
+       "rank_absolute": 9,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[16]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Forward Deployed Engineer Roadmap: Skills and Projects",
+       "url": "https://google.com/goto?url=CAESeQHEIkXXDVuCeKZcnb3X6O1bOVXLE08oHfiE_hOGmyMF8e-zFUBMpBN-JLvCHwlLi5kkjnHIVWRa5RpsWGyIRQLviNoBJVpc2lSxpCh74gzYeF-44YooyBOdJ6X6lW6RZQQ9NDERfCstqrxlu7LjrGOvyQ8NX40s2Ss&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://brollyacademy.com › forward-deployed-engineer...",
+       "website_name": "Brolly Academy",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "9 Oct 2026 — Follow a forward deployed engineer roadmap covering programming, APIs, customer discovery, AI evaluation, deployment and practical portfolio ...",
+       "pre_snippet": "10/09/2026 00:00:00",
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "forward deployed engineer roadmap"
+       ],
+       "links": null,
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": "2026-10-09 00:00:00 +00:00",
+       "rectangle": null
+      },
+      {
+       "type": "organic",
+       "rank_group": 8,
+       "rank_absolute": 10,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[1]/div[2]/div[1]/div[1]/div[18]/div[1]/div[1]",
+       "domain": "google.com",
+       "title": "Forward Deployed Engineer Course (FDE) | AI Training",
+       "url": "https://google.com/goto?url=CAESeAHEIkXXudUM8GgufKSRgrBnsv-W6CyscPAG7sipBQ9AGTsNJTyu5m98Z4EZnZl5uxCeBVBgUWzyiQNBE3WrGONZpG1pzNFSgQIUSYKCHmql8QO-5HdLIUBvxmVzo-M2fZQ_G2AcE-okzUKZWwkN46glgne_E3cN9Q&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+       "cache_url": null,
+       "related_search_url": null,
+       "breadcrumb": "https://www.novelvista.com › forward-deployed-enginee...",
+       "website_name": "NovelVista",
+       "is_image": false,
+       "is_video": false,
+       "is_featured_snippet": false,
+       "is_malicious": false,
+       "is_web_story": false,
+       "checks": null,
+       "description": "This Forward Deployed Engineer Training helps you develop future-ready skills across AI engineering, software development, cloud deployment, client consulting, ... Read more",
+       "pre_snippet": null,
+       "extended_snippet": null,
+       "images": null,
+       "amp_version": false,
+       "rating": null,
+       "price": null,
+       "highlighted": [
+        "Forward Deployed Engineer Training",
+        "engineering"
+       ],
+       "links": [
+        {
+         "type": "link_element",
+         "title": "Read more",
+         "description": null,
+         "url": "https://google.com/goto?url=CAES6AEBxCJF1wdC22EN0BrKk_w67nCC1aa2KU8LURJ8bCvCatFJXbAapAT-aHuzY0-hyWsaAxopXnO3f5Ljry0U4jZ065Pu4bsHhd1p1FZE2qRLWRHTbWzAUbrbf0CVBJlqqslZmSNC27KdYFwwNkxxbTmAqy9XGtUK3EzYNq2BT1lKwJs7J0BHLh78qGzPEx5YitfBfdHOa-7WeTJ7ld5rNEc39h_plh3wDY4HBNMIBfXfCSARmbe5rNfPdhnutRru1DRYMXboD4eJFmdwK0IW0J81hnWfMcT7sI0k_4KAYNxOaloKe-E1mSdZ&gsessionid=tvwgH5RkRETdcTGkOAwfUm0ndKqfaPSm07D2RwKggQox4zJWiiruJA",
+         "domain": "google.com"
+        }
+       ],
+       "faq": null,
+       "extended_people_also_search": null,
+       "about_this_result": null,
+       "related_result": null,
+       "timestamp": null,
+       "rectangle": null
+      },
+      {
+       "type": "related_searches",
+       "rank_group": 1,
+       "rank_absolute": 11,
+       "page": 1,
+       "position": "left",
+       "xpath": "/html[1]/body[1]/div[5]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[2]/div[1]/div[1]/div[1]/div[1]/div[2]",
+       "items": [
+        "Forward Deployed Engineer certification free",
+        "Scaler Forward deployed Engineer course fees",
+        "Forward deployed Engineer certification Anthropic",
+        "Help me evaluate the best online learning paths for forward deployed engineering qui",
+        "Forward Deployed product Manager course",
+        "How to become FDE Engineer"
+       ],
+       "rectangle": null
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

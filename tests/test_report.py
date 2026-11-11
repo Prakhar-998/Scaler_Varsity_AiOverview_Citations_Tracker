@@ -98,16 +98,16 @@ def test_wins_scoreboard_counts_every_run_per_prompt():
     assert [x["prompt"] for x in w] == ["a", "b", "c", "g"]   # 2 of 2 first, then 1 of 2 by best position
     a, b, c, g = w
     assert (a["cited_runs"], a["runs"], a["best_position"], a["last_cited"], a["lost"]) == (2, 2, 3, "2026-11-10 09:00", False)
-    assert a["pages"] == [{"url": V, "kind": "blog", "site": "InterviewBit"}] and a["blog_runs"] == 2
+    assert a["pages"] == [{"url": V, "kind": "blog", "site": "InterviewBit", "match": "url"}] and a["blog_runs"] == 2
     assert (b["cited_runs"], b["runs"], b["last_cited"], b["lost"]) == (1, 2, "2026-11-10 05:00", True)
     assert (c["runs"], c["lost"], c["blog_runs"], c["pages"][0]["kind"]) == (2, True, 0, "other page")
-    assert (g["pages"], g["best_position"]) == ([{"url": V, "kind": "blog", "site": "InterviewBit"}], 4)
+    assert (g["pages"], g["best_position"]) == ([{"url": V, "kind": "blog", "site": "InterviewBit", "match": "url"}], 4)
     assert r["wins_blog"] == 3
     # Scaler is its own board; the double citation shows in both, and an unrecorded page counts in neither
     sc = {x["prompt"]: x for x in r["scaler_wins"]}
     assert set(sc) == {"e", "g"}
     assert (sc["e"]["cited_runs"], sc["e"]["runs"]) == (1, 1) and (sc["g"]["cited_runs"], sc["g"]["runs"]) == (1, 2)
-    assert sc["g"]["pages"] == [{"url": S, "kind": "program page", "site": "Scaler"}] and sc["g"]["best_position"] == 2
+    assert sc["g"]["pages"] == [{"url": S, "kind": "program page", "site": "Scaler", "match": "url"}] and sc["g"]["best_position"] == 2
     assert "e" not in {x["prompt"] for x in w}
     assert r["kpis"]["any_split"] == {"blog": 4, "interviewbit": 1, "scaler": 2, "not_recorded": 1}
     rows = {p["prompt"]: p for p in r["prompts"]}

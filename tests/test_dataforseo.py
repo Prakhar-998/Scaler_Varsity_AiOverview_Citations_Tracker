@@ -4,6 +4,7 @@ import requests
 import pytest
 
 from tracker.checks import CallBudget, get_provider
+from tracker.config import Blog
 from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, STATUS_NO_AIO, STATUS_OK
 from tracker.checks.dataforseo import ENDPOINT, DataForSeoProvider, parse_response
 from tracker.match import domain_of, match_citations
@@ -43,6 +44,7 @@ def make(responses, **kw):
 MOBILE = "dataforseo/aio_fde_salary_india_mobile.json"
 DESKTOP = "dataforseo/aio_fde_salary_india_desktop.json"
 NO_TASKS = "dataforseo/no_tasks_ok_envelope.json"
+LEARNING_PATHS = "dataforseo/aio_fde_learning_paths_desktop.json"  # 2026-11-11 13:26 run
 AIO = DESKTOP
 
 
@@ -204,3 +206,53 @@ def test_no_retry_when_the_budget_is_used_up(load_fixture):
     provider, session = make([FakeResponse(body=task_error(load_fixture, 40101, "Internal SE Server Error."))],
                              budget=budget)
     assert provider.fetch_ai_overview("q").status == STATUS_FAILED and len(session.calls) == 1
+
+
+# Varsity blogs as in data/private/blogs.csv (titles and URLs are public)
+REAL_BLOGS = [Blog("Forward Deployed Engineer Learning Path: How to Become an FDE in 2026",
+                   "forward deployed engineer learning path",
+                   "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer-learning-path/", "fde"),
+              Blog("Forward Deployed Engineer Skills: What AI Companies Actually Hire For in 2026",
+                   "forward deployed engineer skills",
+                   "https://www.interviewbit.com/varsity/blog/forward-deployed-engineer-skills/", "fde")]
+
+
+def _hidden(result, source):
+    return next(r for r in result.references if r.source == source and "google.com/goto" in r.url)
+
+
+def _relabelled(body, title):
+    """The real response, with its hidden Scaler link relabelled as an InterviewBit page titled `title`."""
+    result = parse_response("help me evaluate the best online learning paths for forward deployed engineering", body)
+    ref = _hidden(result, "Scaler")
+    ref.source, ref.title = "InterviewBit", title
+    return result, ref
+
+
+def test_real_hidden_scaler_link_counts_as_a_scaler_page_by_label(load_fixture):
+    q = "help me evaluate the best online learning paths for forward deployed engineering"
+    result = parse_response(q, load_fixture(LEARNING_PATHS))
+    ref = _hidden(result, "Scaler")
+    assert ref.title.startswith("Forward Deployed Engineer Skills 2026")
+    m = match_citations(result, REAL_BLOGS)
+    assert [(p.url, p.position, p.site, p.match, p.name) for p in m.our_pages] == [
+        ("", ref.position, "Scaler", "label", "Scaler page (URL hidden)")]
+    # a Scaler label is never a Varsity blog, even with a blog-like title
+    assert not m.varsity_cited and m.brand_cited and m.brand_position == ref.position and m.brand_urls == []
+    assert "google.com" not in m.competing_domains and "fde.academy" in m.competing_domains
+
+
+def test_real_hidden_interviewbit_link_is_a_blog_only_when_its_title_matches(load_fixture):
+    body = load_fixture(LEARNING_PATHS)
+    result, ref = _relabelled(body, "Forward Deployed Engineer Learning Path: How to Become an FDE ... - InterviewBit")
+    m = match_citations(result, REAL_BLOGS)
+    assert (m.varsity_cited, m.cited_url, m.position, m.varsity_match) == (
+        True, REAL_BLOGS[0].url, ref.position, "title")
+    assert [(p.url, p.match) for p in m.our_pages] == [(REAL_BLOGS[0].url, "title")]
+    # the real Scaler title resembles the skills blog but isn't it: an InterviewBit page, not the blog
+    result, ref = _relabelled(body, "Forward Deployed Engineer Skills 2026 | The Technical & Customer-Facing Skills You Need'")
+    m = match_citations(result, REAL_BLOGS)
+    assert not m.varsity_cited and m.brand_cited
+    assert [(p.site, p.match, p.name) for p in m.our_pages] == [("InterviewBit", "label", "InterviewBit page (URL hidden)")]
+    # without blogs to compare, a hidden InterviewBit link is a label match
+    assert match_citations(result).our_pages[0].match == "label"

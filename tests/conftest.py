@@ -25,5 +25,6 @@ def offline_env(monkeypatch, tmp_path):
 
     monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr(cli, "COST_LOG", tmp_path / "cost_log.csv")
+    monkeypatch.setattr(cli, "DEFAULT_BLOGS", tmp_path / "no_blogs.csv")  # never the real data/private/
     for var in SECRET_VARS:
         monkeypatch.delenv(var, raising=False)

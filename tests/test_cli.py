@@ -25,6 +25,19 @@ def test_run_checks_stops_at_budget(tmp_path):
     assert first["device"] == "mobile"
 
 
+def test_run_checks_matches_hidden_interviewbit_links_to_blogs_by_title():
+    from tracker.config import Blog
+
+    goto = "https://google.com/goto?url=CAESabc"
+    provider = FakeProvider({"a": SerpResult("a", STATUS_OK, shown=True, references=[
+        Reference(goto, title="X Learning Path: How to Become ... - InterviewBit", source="InterviewBit", position=2)])})
+    blogs = [Blog("X Learning Path: How to Become an FDE in 2026", "x", V, "fde")]
+    row = dict(zip(CHECK_HEADERS, cli.run_checks([{"prompt": "a", "cluster": "fde"}], provider, datetime(2026, 11, 11),
+                                                 blogs=blogs)[0]))
+    assert (row["varsity cited"], row["cited url"], row["position"], row["varsity match"]) == ("yes", V, 2, "title")
+    assert row["our pages"] == f"#2 [title] {V}"
+
+
 def test_check_dry_run_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "RUNS", tmp_path)
     monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")

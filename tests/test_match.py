@@ -170,5 +170,7 @@ def test_every_one_of_our_pages_is_recorded_once_in_order():
         Reference(blog, position=3), Reference("https://scaler.com/topics/x?utm_source=g", position=4),
         Reference("https://www.interviewbit.com/courses/y", position=5)])
     m = match_citations(r)
-    assert m.our_pages == [("https://www.scaler.com/topics/x/", 1), (blog, 3), ("https://www.interviewbit.com/courses/y", 5)]
+    assert [(p.url, p.position, p.site, p.match) for p in m.our_pages] == [
+        ("https://www.scaler.com/topics/x/", 1, "Scaler", "url"), (blog, 3, "InterviewBit", "url"),
+        ("https://www.interviewbit.com/courses/y", 5, "InterviewBit", "url")]
     assert (m.varsity_cited, m.brand_cited, m.position, m.brand_position) == (True, True, 3, 1)

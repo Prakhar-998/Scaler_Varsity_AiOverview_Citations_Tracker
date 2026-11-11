@@ -304,6 +304,16 @@ footer p { margin: 0 0 6px; }
       (sp.not_recorded ? " · " + sp.not_recorded + " page not recorded" : "") + " (one AIO can cite several)";
   }
   function pageType(site, kind) { return site && kind && kind !== "page not recorded" ? site + " " + kind : kind; }
+  // how a page was recognised: its URL; a hidden google.com/goto link matched to a Varsity blog by title; or a
+  // hidden link with only the site label to go on
+  var MATCHED = { title: "matched by title", label: "matched by source label" };
+  function pageName(url, site, kind) {
+    return shortUrl(url) || (kind === "page (URL hidden)" ? site + " page (URL hidden)" : "URL not recorded");
+  }
+  function pageNote(site, kind, match) {
+    if (match === "label") return MATCHED.label;
+    return pageType(site, kind) + (MATCHED[match] ? " \u00b7 " + MATCHED[match] : "");
+  }
   var kpis = [
     ["Prompts tracked", dash(k.prompts_tracked), "active set" + (k.prompt_set ? " " + k.prompt_set : "")],
     ["Checks run", dash(k.checks), k.ok + " ok · " + k.incomplete + " incomplete · " + k.no_aio + " no AIO · " + k.failed + " failed"],
@@ -454,7 +464,7 @@ footer p { margin: 0 0 6px; }
         if (!r.brand_cited) return domainsText(r.competitors);
         var span = el("span", null, domainsText(r.competitors));
         var ours = el("div", { class: "muted" }, "our " + pageType(r.brand_site, r.brand_kind) + " cited" + (r.brand_position ? " (#" + r.brand_position + ")" : "") + ": ");
-        ours.appendChild(link(r.brand_url, shortUrl(r.brand_url) || "URL not recorded"));
+        ours.appendChild(link(r.brand_url, pageName(r.brand_url, r.brand_site, r.brand_kind)));
         span.appendChild(ours); return span; } },
     { label: "Our organic rank*", render: function (r) { return rankText(r.organic_rank, r.rank_match, "ok"); } },
     { label: "Varsity blog to improve", render: function (r) {
@@ -490,8 +500,8 @@ footer p { margin: 0 0 6px; }
       { label: pageLabel, cls: "domains", render: function (r) {
           var ul = el("ul", { class: "plist" });
           r.pages.forEach(function (pg) {
-            var li = el("li"); li.appendChild(link(pg.url, shortUrl(pg.url) || "URL not recorded"));
-            li.appendChild(el("div", { class: "muted" }, pageType(pg.site, pg.kind))); ul.appendChild(li);
+            var li = el("li"); li.appendChild(link(pg.url, pageName(pg.url, pg.site, pg.kind)));
+            li.appendChild(el("div", { class: "muted" }, pageNote(pg.site, pg.kind, pg.match))); ul.appendChild(li);
           });
           return ul; } },
       { label: "Best pos.", num: true, render: function (r) { return r.best_position ? "#" + r.best_position : "–"; } },
@@ -613,8 +623,9 @@ footer p { margin: 0 0 6px; }
       if (!p.runs) return "–";
       var span = el("span", null, v + " of " + p.runs); if (p.lost) span.appendChild(lostTag()); return span;
     }
-    if (c.key === "cited_kind") return dash(pageType(p.cited_site, v));
-    if (c.key === "cited_url") return v ? link(v, shortUrl(v) + (p.any_position ? " (#" + p.any_position + ")" : "")) : "–";
+    if (c.key === "cited_kind") return v ? pageNote(p.cited_site, v, p.cited_match) : "–";
+    if (c.key === "cited_url") return v || p.cited_match === "label"
+      ? link(v, pageName(v, p.cited_site, p.cited_kind) + (p.any_position ? " (#" + p.any_position + ")" : "")) : "–";
     return dash(v);
   }
   function sortVal(p, key) {
@@ -735,6 +746,11 @@ footer p { margin: 0 0 6px; }
     "any page = the blog or another interviewbit.com / scaler.com page cited / ok. Page type: \u201cprogram page\u201d when the URL path " +
     "has course, program or academy, otherwise \u201cother page\u201d; checks from before 2026-11-11 didn't record which brand page " +
     "(\u201cpage not recorded\u201d). Failed checks are left out of every rate."));
+  footer.appendChild(el("p", null,
+    "Hidden links: some AI Overview sources come back as google.com/goto links whose URL can't be read, only a site label " +
+    "and title. A link labelled InterviewBit whose title matches a Varsity blog title counts as that blog (\u201cmatched by " +
+    "title\u201d); otherwise a link labelled InterviewBit or Scaler counts as that site's page (\u201cURL hidden\u201d, " +
+    "\u201cmatched by source label\u201d) and never as the blog."));
   footer.appendChild(el("p", null,
     "* Organic rank: the best Varsity result in Google's top 10 organic results; \u201cnot in top 10\u201d means " +
     "none on page one. On desktop the organic links come back as opaque google.com redirects, so the match is " +
