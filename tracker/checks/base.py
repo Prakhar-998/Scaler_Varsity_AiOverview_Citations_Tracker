@@ -5,7 +5,9 @@ Every SERP provider implements `SerpProvider.fetch_ai_overview(query)` and retur
 """
 from __future__ import annotations
 
+import hashlib
 import html
+import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -13,6 +15,14 @@ STATUS_OK = "ok"          # AI Overview shown and parsed
 STATUS_NO_AIO = "no_aio"  # SERP fetched fine, no AI Overview on it
 STATUS_INCOMPLETE = "incomplete"  # AIO shown but its sources did not load; citations unknown
 STATUS_FAILED = "failed"  # request or parse failed; says nothing about AIO presence
+
+
+def query_label(query: str) -> str:
+    """How a query is named in logs. With TRACKER_REDACT_LOGS=1 (set by the GitHub Actions workflow: a public
+    repo's Actions logs are public) a short hash stands in for the prompt text."""
+    if os.environ.get("TRACKER_REDACT_LOGS", "").strip().lower() in ("1", "true", "yes"):
+        return "query " + hashlib.sha256(query.encode()).hexdigest()[:8]
+    return repr(query)
 
 
 class BudgetExceeded(RuntimeError):

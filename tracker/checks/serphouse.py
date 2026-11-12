@@ -30,6 +30,7 @@ from .base import (
     Reference,
     SerpProvider,
     SerpResult,
+    query_label,
     site_url,
 )
 
@@ -79,12 +80,12 @@ class SerphouseProvider(SerpProvider):
         for _ in range(self.incomplete_retries if retry_incomplete else 0):
             if result.status != STATUS_INCOMPLETE:
                 break
-            log.info("AI Overview without sources for %r; retrying", query)
+            log.info("AI Overview without sources for %s; retrying", query_label(query))
             time.sleep(self.incomplete_delay)
             try:
                 result = self._fetch(query)
             except BudgetExceeded:
-                log.warning("SERP budget used up before incomplete retry for %r", query)
+                log.warning("SERP budget used up before incomplete retry for %s", query_label(query))
                 break
         return result
 
@@ -100,7 +101,8 @@ class SerphouseProvider(SerpProvider):
                 resp = self.session.post(ENDPOINT, json=payload, headers=headers, timeout=self.timeout)
             except requests.RequestException as exc:
                 last_error = f"request error: {exc}"
-                log.warning("SERPHouse attempt %d/%d for %r: %s", attempt + 1, self.retries + 1, query, last_error)
+                log.warning("SERPHouse attempt %d/%d for %s: %s", attempt + 1, self.retries + 1, query_label(query),
+                            last_error)
             else:
                 if resp.status_code == 200:
                     try:
@@ -109,7 +111,7 @@ class SerphouseProvider(SerpProvider):
                         return SerpResult.failed(query, "response was not JSON")
                     return parse_response(query, body)
                 last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                log.warning("SERPHouse attempt %d/%d for %r: HTTP %d", attempt + 1, self.retries + 1, query,
+                log.warning("SERPHouse attempt %d/%d for %s: HTTP %d", attempt + 1, self.retries + 1, query_label(query),
                             resp.status_code)
                 if resp.status_code < 500 and resp.status_code != 429:
                     break  # client error: retrying won't help

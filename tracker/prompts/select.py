@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from rapidfuzz import fuzz, process
 
-from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, BudgetExceeded, SerpProvider
+from tracker.checks.base import STATUS_FAILED, STATUS_INCOMPLETE, BudgetExceeded, SerpProvider, query_label
 from tracker.config import Cluster, GscQuery
 
 from .generate import Candidate
@@ -161,7 +161,7 @@ def select_prompts(
             d.reason = "no GSC match; not probed (SERP budget used up)"
             continue
         probe_no += 1
-        log.info("probe %d/%d: %s", probe_no, n_probes, d.prompt)
+        log.info("probe %d/%d: %s", probe_no, n_probes, query_label(d.prompt))
         try:
             # an incomplete AI Overview already proves one is shown, so don't pay for a retry
             res = provider.fetch_ai_overview(d.prompt, retry_incomplete=False)

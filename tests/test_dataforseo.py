@@ -256,3 +256,16 @@ def test_real_hidden_interviewbit_link_is_a_blog_only_when_its_title_matches(loa
     assert [(p.site, p.match, p.name) for p in m.our_pages] == [("InterviewBit", "label", "InterviewBit page (URL hidden)")]
     # without blogs to compare, a hidden InterviewBit link is a label match
     assert match_citations(result).our_pages[0].match == "label"
+
+
+def test_logs_name_a_hash_not_the_prompt_when_redacted(load_fixture, monkeypatch, caplog):
+    from tracker.checks.base import query_label
+
+    monkeypatch.setenv("TRACKER_REDACT_LOGS", "1")
+    provider, _ = make([FakeResponse(body=incomplete(load_fixture)), FakeResponse(body=load_fixture(AIO))])
+    with caplog.at_level("INFO"):
+        provider.fetch_ai_overview("fde course fees in india")
+    assert "retrying" in caplog.text and "fde course fees" not in caplog.text
+    assert query_label("fde course fees in india") in caplog.text
+    monkeypatch.delenv("TRACKER_REDACT_LOGS")
+    assert query_label("q") == "'q'"

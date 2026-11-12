@@ -37,6 +37,7 @@ from .base import (
     Reference,
     SerpProvider,
     SerpResult,
+    query_label,
     site_url,
 )
 
@@ -113,22 +114,23 @@ class DataForSeoProvider(SerpProvider):
             code = status_code(result.raw) if result.status == STATUS_FAILED else None
             if not is_transient(code):
                 break
-            log.warning("DataForSEO %s for %r; retrying once in %.0fs", result.error, query, self.transient_delay)
+            log.warning("DataForSEO %s for %s; retrying once in %.0fs", result.error, query_label(query),
+                        self.transient_delay)
             time.sleep(self.transient_delay)
             try:
                 result = self._fetch(query)
             except BudgetExceeded:
-                log.warning("SERP budget / cost cap used up before the retry for %r", query)
+                log.warning("SERP budget / cost cap used up before the retry for %s", query_label(query))
                 break
         for _ in range(self.incomplete_retries if retry_incomplete else 0):
             if result.status != STATUS_INCOMPLETE:
                 break
-            log.info("AI Overview without sources for %r; retrying", query)
+            log.info("AI Overview without sources for %s; retrying", query_label(query))
             time.sleep(self.incomplete_delay)
             try:
                 result = self._fetch(query)
             except BudgetExceeded:
-                log.warning("SERP budget used up before incomplete retry for %r", query)
+                log.warning("SERP budget used up before incomplete retry for %s", query_label(query))
                 break
         return result
 
