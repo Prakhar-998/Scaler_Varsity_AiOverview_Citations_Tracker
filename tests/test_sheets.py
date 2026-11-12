@@ -6,6 +6,7 @@ import gspread
 import pytest
 
 from tracker import cli
+from tracker.checks.base import STATUS_FAILED, SerpResult
 from tracker.output import CHECK_HEADERS, COST_HEADERS, PROMPT_HEADERS, SheetsWriter
 from tracker.prompts import prompt_set_id
 from tracker.report import load_sheet, real_checks
@@ -105,6 +106,14 @@ def test_check_reads_the_active_set_from_the_sheet_and_appends(sheet, tmp_path, 
 def test_check_without_active_prompts_in_the_sheet_fails(sheet, caplog):
     assert cli.main(["--provider", "fake", "check"]) == 1
     assert "no active prompts in the Sheet" in caplog.text
+
+
+def test_check_fails_when_every_check_failed(sheet, monkeypatch):
+    sheet.write_prompts([prompt_row("a")])
+    monkeypatch.setattr(cli, "run_checks", lambda prompts, provider, *a, **k: [
+        cli.check_row(a[0], "a", "fde", SerpResult.failed("a", "HTTP 401"), None, device="desktop")])
+    assert cli.main(["--provider", "fake", "check"]) == 5
+    assert sheet.read_check_records()[0]["check status"] == STATUS_FAILED  # still recorded
 
 
 def test_blogs_come_from_the_sheet_when_the_file_is_missing(sheet):

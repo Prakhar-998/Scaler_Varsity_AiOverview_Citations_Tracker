@@ -385,7 +385,8 @@ def test_check_aborts_before_any_call_when_over_max_cost(tmp_path, monkeypatch, 
     calls = []
     monkeypatch.setattr(cli, "load_settings", lambda: {"max_serp_calls": 10, "devices": ["desktop"],
                                                       "cost_per_check_usd": {"fake": 0.25}})
-    monkeypatch.setattr(cli, "run_checks", lambda *a, **k: calls.append(a) or [])
+    ok_row = ["ok" if h == "check status" else "" for h in CHECK_HEADERS]
+    monkeypatch.setattr(cli, "run_checks", lambda *a, **k: calls.append(a) or [ok_row])
     monkeypatch.setattr(cli, "RUNS", tmp_path)
     monkeypatch.setattr(cli, "ACTIVE_PROMPTS", tmp_path / "active.json")
     (tmp_path / "active.json").write_text(json.dumps([{"prompt": "a", "cluster": "fde"},

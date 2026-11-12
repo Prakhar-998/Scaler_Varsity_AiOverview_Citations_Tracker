@@ -325,6 +325,9 @@ def cmd_check(args, settings) -> int:
     # the logged estimate covers every call made, retries included
     record_cost("check", providers, len(rows), budget.used, None if rate is None else float(rate) * budget.used,
                 store=_store(writer))
+    if not rows or counts["failed"] == len(rows):
+        log.error("no check succeeded (%d of %d failed); see the error column", counts["failed"], len(rows))
+        return 5
     return 0
 
 
