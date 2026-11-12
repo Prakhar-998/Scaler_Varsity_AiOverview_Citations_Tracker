@@ -1,0 +1,69 @@
+# Scheduled AI Overview checks: run every active prompt from the Sheet once on DataForSEO (desktop), append
+# the results to the Sheet, and build the dashboard from the Sheet's history. Setup: SETUP.md.
+#
+# Nothing private lands in the repo or the logs: prompts, checks and blogs live in the Sheet; prompt text is
+# hashed in log lines (TRACKER_REDACT_LOGS); no SERP response is printed. The dashboard holds company data,
+# so it is uploaded as an artifact only when the repository is private.
+name: check
+
+on:
+  schedule:
+    - cron: "0 1 * * 1,4"  # Mon and Thu 01:00 UTC = 06:30 IST (GitHub may start scheduled runs late)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check  # never two runs appending to the Sheet at once
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Kolkata  # check dates and times in IST, like the earlier runs
+      TRACKER_REDACT_LOGS: "1"
+      DATAFORSEO_LOGIN: ${{ secrets.DATAFORSEO_LOGIN }}
+      DATAFORSEO_PASSWORD: ${{ secrets.DATAFORSEO_PASSWORD }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SHEET_ID: ${{ secrets.SHEET_ID }}
+      # OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}  # for scheduled select (later)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # offline (fake provider and Sheet), so a broken build fails before any paid call
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Check active prompts (DataForSEO, desktop)
+        run: python -m tracker check --provider dataforseo --device desktop --max-cost 0.40
+
+      - name: Build dashboard from the Sheet
+        run: python -m tracker report
+
+      - name: Upload dashboard
+        if: github.event.repository.private
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: dashboard/index.html
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Dashboard not uploaded (public repository)
+        if: ${{ !github.event.repository.private }}
+        run: >-
+          echo "::warning::dashboard not uploaded: artifacts of a public repository can be downloaded by any
+          GitHub user, and the dashboard holds prompts and GSC data. Make the repository private to get it
+          (see SETUP.md)."
