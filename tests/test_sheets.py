@@ -1,13 +1,15 @@
 """The Sheet as the store for real runs, with an in-memory stand-in for the gspread spreadsheet."""
+import csv
 import json
 
 import gspread
 import pytest
 
 from tracker import cli
-from tracker.output import CHECK_HEADERS, PROMPT_HEADERS, SheetsWriter
+from tracker.output import CHECK_HEADERS, COST_HEADERS, PROMPT_HEADERS, SheetsWriter
 from tracker.prompts import prompt_set_id
-from tracker.report import load_sheet
+from tracker.report import load_sheet, real_checks
+from tracker.report.data import load_runs
 
 
 class FakeTab:
@@ -126,3 +128,52 @@ def test_report_reads_history_from_the_sheet(sheet, tmp_path):
     data = json.loads(out.read_text().split('type="application/json">', 1)[1].split("</script>", 1)[0]
                       .replace("<\\/", "</"))
     assert data["kpis"]["checks"] == 1 and len(data["wins"]) == 1
+
+
+def _csv(path, headers, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=headers)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def _check(prompt, time, pset=""):
+    row = dict.fromkeys(CHECK_HEADERS, "")
+    row.update({"date": "2026-11-10", "time": time, "prompt": prompt, "cluster": "fde", "device": "desktop",
+                "check status": "no_aio", "ai overview shown": "no", "prompt set": pset})
+    return row
+
+
+def _runs(tmp_path):
+    runs = tmp_path / "runs"
+    prompts = [dict(zip(PROMPT_HEADERS, prompt_row(p))) for p in ("a", "b")]
+    _csv(runs / "dry-run-20261110-080000/prompts.csv", PROMPT_HEADERS, prompts)
+    _csv(runs / "dry-run-20261110-090000/checks.csv", CHECK_HEADERS, [_check("a", "09:00"), _check("b", "09:00")])
+    _csv(runs / "dry-run-20261110-100000/checks.csv", CHECK_HEADERS, [_check("x", "10:00", "file:test.csv")])
+    _csv(runs / "dry-run-20261110-110000/checks.csv", CHECK_HEADERS, [_check("zz", "11:00")])  # untagged, unknown set
+    _csv(runs / "dry-run-20261110-120000/checks.csv", CHECK_HEADERS,
+         [_check("a", "12:00", prompt_set_id(["a", "b"]))])
+    _csv(runs / "cost_log.csv", COST_HEADERS, [dict(zip(COST_HEADERS, ["2026-11-10", "09:00", "check", "dataforseo",
+                                                                      "desktop", "2", "2", "0.0080", "0.0080"]))])
+    (runs / "active_prompts.json").write_text(json.dumps([{"prompt": p, "cluster": "fde", "source": "gsc"}
+                                                          for p in ("a", "b")]))
+    return runs
+
+
+def test_real_checks_leave_out_test_runs_and_tag_untagged_runs(tmp_path):
+    rows, excluded = real_checks(load_runs(_runs(tmp_path)))
+    assert [(r["prompt"], r["time"]) for r in rows] == [("a", "09:00"), ("b", "09:00"), ("a", "12:00")]
+    assert {r["prompt set"] for r in rows} == {prompt_set_id(["a", "b"])}
+    assert len(excluded) == 2
+
+
+def test_migrate_imports_once(sheet, tmp_path, monkeypatch):
+    runs = _runs(tmp_path)
+    assert cli.main(["migrate", "--runs", str(runs), "--dry-run"]) == 0
+    assert sheet.book.tabs == {}  # a dry run writes nothing
+    assert cli.main(["migrate", "--runs", str(runs), "--blogs", str(tmp_path / "missing.csv")]) == 0
+    assert cli.main(["migrate", "--runs", str(runs), "--blogs", str(tmp_path / "missing.csv")]) == 0
+    assert [r["prompt"] for r in sheet.active_prompts()] == ["a", "b"]
+    assert len(sheet.read_check_records()) == 3 and len(sheet.read_costs()) == 1  # not doubled
+    assert "Blogs" not in sheet.book.tabs

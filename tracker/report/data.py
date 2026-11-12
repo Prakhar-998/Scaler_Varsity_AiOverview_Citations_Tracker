@@ -23,7 +23,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from rapidfuzz import fuzz
 
@@ -94,6 +94,21 @@ def load_sheet(store) -> RunInputs:
     return RunInputs(prompts=prompts, prompts_from="the Sheet's Prompts tab" if prompts else "",
                      checks=store.read_check_records(), costs=store.read_costs(),
                      active=[r["prompt"] for r in prompts if r.get("status") == "active" and r.get("prompt")])
+
+
+def real_checks(inputs: RunInputs) -> Tuple[List[Dict[str, str]], List[Dict]]:
+    """Every check of a real run (test runs left out), with untagged runs tagged with the id of the set
+    they checked, and a summary of what was left out. Used to import runs/ into the Sheet."""
+    active = _active(inputs)
+    _, real, others = _split_runs(inputs.checks, active, _known_sets(inputs, active))
+    runs: Dict[str, List[Dict[str, str]]] = defaultdict(list)
+    for r in real:
+        runs[_checked_at(r)].append(r)
+    tagged = []
+    for rows in runs.values():
+        tag = next((r["prompt set"] for r in rows if r.get("prompt set")), "") or prompt_set_id(r["prompt"] for r in rows)
+        tagged += [dict(r, **{"prompt set": r.get("prompt set") or tag}) for r in rows]
+    return sorted(tagged, key=_checked_at), [o for o in others if "test run" in o["why"]]
 
 
 def _pct(n: int, d: int) -> Optional[float]:
@@ -336,16 +351,24 @@ def _runs_cited(h: Optional[Dict]) -> Dict:
     return {"cited_runs": h.get("cited_runs", 0), "runs": h.get("runs", 0), "lost": h.get("lost", False)}
 
 
+def _active(inputs: RunInputs) -> List[str]:
+    """active_prompts.json (or the Sheet's active rows) is what `check` runs; the latest prompts.csv is the fallback."""
+    return inputs.active or [r["prompt"] for r in inputs.prompts if r.get("status") == "active"]
+
+
+def _known_sets(inputs: RunInputs, active: List[str]) -> set:
+    active_rows = [r["prompt"] for r in inputs.prompts if r.get("status") == "active"]
+    return (set(inputs.known_sets) | ({prompt_set_id(active)} if active else set())
+            | ({prompt_set_id(active_rows)} if active_rows else set()))
+
+
 def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
                  generated_at: Optional[datetime] = None, sample: bool = False) -> Dict:
     names = {c.key: c.name for c in clusters}
     meta: Dict[str, Dict[str, str]] = {r["prompt"]: r for r in inputs.prompts if r.get("prompt")}
-    active_rows = [r for r in inputs.prompts if r.get("status") == "active"]
-    # active_prompts.json is what `check` runs; the latest prompts.csv is the fallback
-    active = inputs.active or [r["prompt"] for r in active_rows]
+    active = _active(inputs)
     current = prompt_set_id(active) if active else ""
-    known = set(inputs.known_sets) | {current} | ({prompt_set_id(r["prompt"] for r in active_rows)} if active_rows else set())
-    checks, real_rows, other_runs = _split_runs(inputs.checks, active, known)
+    checks, real_rows, other_runs = _split_runs(inputs.checks, active, _known_sets(inputs, active))
     latest = _latest_per_prompt(checks)
 
     def info(prompt: str) -> Dict:
@@ -458,4 +481,4 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             "trend": trend, "other_runs": other_runs}
 
 
-__all__ = ["RunInputs", "load_runs", "load_sheet", "build_report"]
+__all__ = ["RunInputs", "load_runs", "load_sheet", "real_checks", "build_report"]

@@ -4,6 +4,7 @@
   python -m tracker check [--dry-run] [--save-raw]      # run twice a day at different times
   python -m tracker probe "best generative ai course in india"   # one SERP call, for spot checks
   python -m tracker report [--dry-run]                           # dashboard/index.html from the Sheet (or runs/)
+  python -m tracker migrate [--dry-run]                          # one-time: import runs/ into the Sheet
 
 Every command takes --provider serphouse|dataforseo|fake (default: SERP_PROVIDER, else
 `serp_provider` in config/settings.yaml: dataforseo for check and probe, serphouse for select)
@@ -25,7 +26,7 @@ from tracker.checks import DEVICES, BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, SerpResult
 from tracker.config import ROOT, blogs_from_rows, load_blogs, load_brand_rules, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
-from tracker.output import (CHECK_HEADERS, COST_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row,
+from tracker.output import (CHECK_HEADERS, COST_HEADERS, PROMPT_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row,
                             sheets_configured, summarise)
 from tracker.llm import build_chain
 from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, load_prompt_file,
@@ -391,6 +392,60 @@ def cmd_report(args, settings) -> int:
     return 0
 
 
+def cmd_migrate(args, settings) -> int:
+    """One-time import of runs/ into the Sheet: the active set (Prompts tab), every check of a real run
+    (test runs left out; untagged runs tagged with their set), the cost log and the blogs file.
+    Safe to re-run: checks and cost rows already in the Sheet are skipped."""
+    from tracker.report import load_runs, real_checks
+
+    runs = Path(args.runs) if args.runs else RUNS
+    inputs = load_runs(runs)
+    if not inputs.active:
+        log.error("no %s to import", runs / "active_prompts.json")
+        return 1
+    clusters = {p["prompt"]: p for p in json.loads((runs / "active_prompts.json").read_text())}
+    # the latest select's decisions, with status following active_prompts.json (what check actually ran)
+    prompt_rows, seen = [], set()
+    for r in inputs.prompts:
+        status = "active" if r["prompt"] in clusters else ("dropped" if r.get("status") == "active" else r.get("status", ""))
+        prompt_rows.append([status if h == "status" else r.get(h, "") for h in PROMPT_HEADERS])
+        seen.add(r["prompt"])
+    for p, c in clusters.items():
+        if p not in seen:
+            prompt_rows.append([{"prompt": p, "cluster": c.get("cluster", ""), "source": c.get("source", ""),
+                                 "status": "active", "reason": "imported from active_prompts.json"}.get(h, "")
+                                for h in PROMPT_HEADERS])
+    checks, excluded = real_checks(inputs)
+    blogs_path = Path(args.blogs) if args.blogs else DEFAULT_BLOGS
+    blogs = [[b.title, b.primary_keyword, b.url] for b in load_blogs(blogs_path, load_clusters(active_only=False))] \
+        if blogs_path.exists() else []
+    log.info("runs/: %d active prompts (%d Prompts rows), %d checks of real runs, %d cost rows, %d blogs",
+             len(clusters), len(prompt_rows), len(checks), len(inputs.costs), len(blogs))
+    for o in excluded:
+        log.info("left out: %s, %d checks (%s)", o["checked_at"], o["checks"], o["why"])
+    if args.dry_run:
+        log.info("dry run: nothing written to the Sheet")
+        return 0
+
+    store = SheetsWriter.from_env()
+    key = lambda r: (r.get("date"), r.get("time"), r.get("prompt"), r.get("device", ""))
+    have = {key(r) for r in store.read_check_records()}
+    new_checks = [[r.get(h, "") for h in CHECK_HEADERS] for r in checks if key(r) not in have]
+    have_costs = {tuple(r.get(h, "") for h in COST_HEADERS) for r in store.read_costs()}
+    new_costs = [row for row in ([r.get(h, "") for h in COST_HEADERS] for r in inputs.costs)
+                 if tuple(row) not in have_costs]
+    store.write_prompts(prompt_rows)
+    store.append_checks(new_checks)
+    store.append_costs(new_costs)
+    if blogs:
+        store.write_blogs(blogs)
+    store.write_summary(summarise(store.read_checks()))
+    log.info("Sheet: Prompts replaced (%d rows); %d checks and %d cost rows added (%d and %d already there)%s",
+             len(prompt_rows), len(new_checks), len(new_costs), len(checks) - len(new_checks),
+             len(inputs.costs) - len(new_costs), f"; Blogs tab: {len(blogs)} blogs" if blogs else "")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="tracker", description="AI Overview citation tracker (Varsity)")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -430,6 +485,11 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--runs", help="read select/check outputs from this folder instead of the Sheet")
     rp.add_argument("--blogs", help="blogs CSV for mapping gaps to a Varsity blog (default: data/private/blogs.csv)")
 
+    mg = sub.add_parser("migrate", help="one-time: import the active set and real checks from runs/ into the Sheet")
+    mg.add_argument("--dry-run", action="store_true", help="only log what would be imported")
+    mg.add_argument("--runs", help="folder to import (default: runs/)")
+    mg.add_argument("--blogs", help="blogs CSV for the Blogs tab (default: data/private/blogs.csv)")
+
     # also accepted after the command name; SUPPRESS keeps a value given before it
     for sp in (s, c, pr):
         sp.add_argument("--provider", choices=PROVIDERS, default=argparse.SUPPRESS,
@@ -447,7 +507,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     settings = load_settings()
     try:
         return {"select": cmd_select, "check": cmd_check, "probe": cmd_probe,
-                "report": cmd_report}[args.cmd](args, settings)
+                "report": cmd_report, "migrate": cmd_migrate}[args.cmd](args, settings)
     except ProviderError as exc:
         log.error("%s", exc)
         return 2
