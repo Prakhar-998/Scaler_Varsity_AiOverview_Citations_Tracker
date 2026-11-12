@@ -19,6 +19,9 @@ OUR_PAGES_SEP = " | "
 SUMMARY_HEADERS = ["cluster", "device", "checks", "ok", "incomplete", "no_aio", "failed", "ai overview presence %",
                    "varsity citation rate %", "incomplete rate %", "brand citation rate %",
                    "any page citation rate %"]
+COST_HEADERS = ["date", "time", "command", "provider", "devices", "checks", "serp calls", "estimated usd",
+                "billed usd"]
+BLOG_HEADERS = ["title", "primary_keyword", "url"]
 
 
 def prompt_row(d) -> List:

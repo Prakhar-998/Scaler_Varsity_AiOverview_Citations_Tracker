@@ -98,15 +98,20 @@ def _pick(row: Dict[str, str], *names: str) -> str:
 
 
 def load_blogs(path: Path, clusters: List[Cluster]) -> List[Blog]:
-    blogs = []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        for row in csv.DictReader(f):
-            title = _pick(row, "title", "post title")
-            kw = _pick(row, "primary_keyword", "primary keyword", "focus keyword", "keyword")
-            if not title:
-                continue
-            blogs.append(Blog(title, kw, _pick(row, "url", "link", "permalink"),
-                              assign_cluster(f"{title} {kw}", clusters)))
+        return blogs_from_rows(csv.DictReader(f), clusters)
+
+
+def blogs_from_rows(rows, clusters: List[Cluster]) -> List[Blog]:
+    """Blogs from CSV-style dict rows (a blogs export, or the Sheet's Blogs tab)."""
+    blogs = []
+    for row in rows:
+        title = _pick(row, "title", "post title")
+        kw = _pick(row, "primary_keyword", "primary keyword", "focus keyword", "keyword")
+        if not title:
+            continue
+        blogs.append(Blog(title, kw, _pick(row, "url", "link", "permalink"),
+                          assign_cluster(f"{title} {kw}", clusters)))
     return blogs
 
 

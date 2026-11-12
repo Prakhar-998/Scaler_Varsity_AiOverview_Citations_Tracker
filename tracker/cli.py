@@ -23,9 +23,10 @@ from typing import List, Optional, Sequence
 
 from tracker.checks import DEVICES, BudgetExceeded, CallBudget, get_provider
 from tracker.checks.base import STATUS_FAILED, SerpResult
-from tracker.config import ROOT, load_blogs, load_brand_rules, load_clusters, load_gsc, load_settings
+from tracker.config import ROOT, blogs_from_rows, load_blogs, load_brand_rules, load_clusters, load_gsc, load_settings
 from tracker.match import match_citations
-from tracker.output import CHECK_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row, summarise
+from tracker.output import (CHECK_HEADERS, COST_HEADERS, CsvWriter, SheetsWriter, check_row, prompt_row,
+                            sheets_configured, summarise)
 from tracker.llm import build_chain
 from tracker.prompts import (ACTIVE, CandidateLog, LLMDrafter, draft_candidates, gsc_candidates, load_prompt_file,
                              prompt_file_set_id, prompt_set_id, select_prompts, tag_brands)
@@ -34,8 +35,6 @@ log = logging.getLogger("tracker")
 RUNS = ROOT / "runs"
 ACTIVE_PROMPTS = RUNS / "active_prompts.json"
 COST_LOG = RUNS / "cost_log.csv"
-COST_HEADERS = ["date", "time", "command", "provider", "devices", "checks", "serp calls", "estimated usd",
-                "billed usd"]
 PROVIDERS = ("serphouse", "dataforseo", "fake")
 
 
@@ -60,7 +59,7 @@ def make_writer(dry_run: bool, stamp: str):
         out = run_dir(dry_run, stamp)
         log.info("dry run: writing CSVs to %s instead of Sheets", out)
         return CsvWriter(out)
-    return SheetsWriter(os.environ.get("SHEET_ID", ""), os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""))
+    return SheetsWriter.from_env()
 
 
 class ProviderError(Exception):
@@ -128,6 +127,7 @@ def cmd_select(args, settings) -> int:
     gsc = load_gsc(Path(args.gsc), clusters) if args.gsc else []
     log.info("source: %s%s; %d GSC queries", args.source, f" + {args.prompts}" if args.prompts else "", len(gsc))
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    writer = make_writer(args.dry_run, stamp)  # before any paid call, so bad Sheet credentials fail fast
 
     # GSC first, so when both sources produce the same search the GSC version is the one kept
     candidates = []
@@ -171,14 +171,18 @@ def cmd_select(args, settings) -> int:
     if provider is not None:
         rate = (settings.get("cost_per_check_usd") or {}).get(provider.name)
         record_cost("select", [provider], budget.used, budget.used,
-                    None if rate is None else float(rate) * budget.used)
+                    None if rate is None else float(rate) * budget.used, store=_store(writer))
 
     RUNS.mkdir(exist_ok=True)
     ACTIVE_PROMPTS.write_text(json.dumps(
         [{"prompt": d.prompt, "cluster": d.candidate.cluster, "source": d.candidate.source} for d in kept],
         indent=2))
-    make_writer(args.dry_run, stamp).write_prompts([prompt_row(d) for d in decisions])
+    writer.write_prompts([prompt_row(d) for d in decisions])
     return 0
+
+
+def _store(writer) -> Optional[SheetsWriter]:
+    return writer if isinstance(writer, SheetsWriter) else None
 
 
 def log_cost_estimate(provider: str, checks: int, settings) -> Optional[float]:
@@ -193,9 +197,10 @@ def log_cost_estimate(provider: str, checks: int, settings) -> Optional[float]:
 
 
 def record_cost(command: str, providers: list, checks: int, calls: int, estimate: Optional[float],
-                when: Optional[datetime] = None) -> None:
-    """Append one row per run to runs/cost_log.csv. `billed usd` is what the provider reported
-    (DataForSEO returns the cost of each call); blank when the provider doesn't report it."""
+                when: Optional[datetime] = None, store: Optional[SheetsWriter] = None) -> None:
+    """Append one row per run to runs/cost_log.csv, and to the Sheet's Costs tab when `store` is given.
+    `billed usd` is what the provider reported (DataForSEO returns the cost of each call); blank when the
+    provider doesn't report it."""
     if not providers or calls == 0:
         return
     when = when or datetime.now()
@@ -203,24 +208,34 @@ def record_cost(command: str, providers: list, checks: int, calls: int, estimate
     billed = f"{sum(spent):.4f}" if spent else ""
     new = not COST_LOG.exists()
     COST_LOG.parent.mkdir(parents=True, exist_ok=True)
+    row = [when.strftime("%Y-%m-%d"), when.strftime("%H:%M"), command, providers[0].name,
+           " ".join(p.device for p in providers), checks, calls, "" if estimate is None else f"{estimate:.4f}", billed]
     with open(COST_LOG, "a", newline="") as f:
         w = csv.writer(f)
         if new:
             w.writerow(COST_HEADERS)
-        w.writerow([when.strftime("%Y-%m-%d"), when.strftime("%H:%M"), command, providers[0].name,
-                    " ".join(p.device for p in providers), checks, calls,
-                    "" if estimate is None else f"{estimate:.4f}", billed])
+        w.writerow(row)
+    if store is not None:
+        store.append_costs([[str(v) for v in row]])
     if billed:
         log.info("billed: $%s on %s", billed, providers[0].name)
 
 
-def varsity_blogs() -> list:
-    """Varsity blogs from data/private/blogs.csv, so a hidden google.com/goto reference labelled InterviewBit
-    can be matched to a blog by title. Empty (label matches only) when the file isn't there."""
-    if not DEFAULT_BLOGS.exists():
-        log.warning("no blogs file at %s; hidden InterviewBit links can't be matched to a blog by title", DEFAULT_BLOGS)
-        return []
-    return load_blogs(DEFAULT_BLOGS, load_clusters(active_only=False))
+def varsity_blogs(store: Optional[SheetsWriter] = None, path: Optional[Path] = None) -> list:
+    """Varsity blogs from data/private/blogs.csv (or `path`), else the Sheet's Blogs tab (a GitHub Actions
+    runner has no data/private/), so a hidden google.com/goto reference labelled InterviewBit can be matched
+    to a blog by title and gaps mapped to a blog. Empty when neither is there."""
+    path = path or DEFAULT_BLOGS
+    clusters = load_clusters(active_only=False)
+    if path.exists():
+        return load_blogs(path, clusters)
+    rows = store.read_blogs() if store is not None else None
+    if rows:
+        log.info("blogs: %d from the Sheet's Blogs tab", len(rows))
+        return blogs_from_rows(rows, clusters)
+    log.warning("no blogs file at %s%s; hidden InterviewBit links can't be matched to a blog by title", path,
+                " and no Blogs tab in the Sheet" if store is not None else "")
+    return []
 
 
 def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[Path] = None, prompt_set: str = "",
@@ -245,11 +260,21 @@ def run_checks(prompts: List[dict], provider, when: datetime, raw_dir: Optional[
 
 
 def cmd_check(args, settings) -> int:
+    writer = None
     if args.prompts:
         # read-only: checking a prompt file never touches active_prompts.json
         prompts = [{"prompt": c.prompt, "cluster": c.cluster, "source": c.source}
                    for c in load_prompt_file(Path(args.prompts), load_clusters())]
         prompt_set = prompt_file_set_id(Path(args.prompts))
+    elif not args.dry_run:
+        # real runs read the active set from the Sheet's Prompts tab, so a fresh runner has it
+        writer = SheetsWriter.from_env()
+        prompts = writer.active_prompts()
+        if not prompts:
+            log.error("no active prompts in the Sheet's Prompts tab; run `select` (without --dry-run) or "
+                      "`migrate` first, or pass --prompts")
+            return 1
+        prompt_set = prompt_set_id(p["prompt"] for p in prompts)
     elif not ACTIVE_PROMPTS.exists():
         log.error("no %s; run `select` first, or pass --prompts", ACTIVE_PROMPTS)
         return 1
@@ -283,21 +308,34 @@ def cmd_check(args, settings) -> int:
         raw_dir = RUNS / f"raw-{stamp}"
         raw_dir.mkdir(parents=True, exist_ok=True)
 
-    rows, blogs = [], varsity_blogs()
+    if writer is None:
+        writer = make_writer(args.dry_run, stamp)
+    rows, blogs = [], varsity_blogs(_store(writer))
     for provider in providers:
         if budget.remaining <= 0:
             log.warning("SERP budget used up; skipping %s", provider.device)
             continue
         rows += run_checks(prompts, provider, now, raw_dir, prompt_set, blogs)
-    writer = make_writer(args.dry_run, stamp)
     writer.append_checks(rows)
     writer.write_summary(summarise(writer.read_checks()))
     col = CHECK_HEADERS.index("check status")
     counts = {s: sum(r[col] == s for r in rows) for s in ("ok", "incomplete", "no_aio", "failed")}
     log.info("%d checks %s; %d SERP calls used", len(rows), counts, budget.used)
     # the logged estimate covers every call made, retries included
-    record_cost("check", providers, len(rows), budget.used, None if rate is None else float(rate) * budget.used)
+    record_cost("check", providers, len(rows), budget.used, None if rate is None else float(rate) * budget.used,
+                store=_store(writer))
     return 0
+
+
+def _optional_sheet() -> Optional[SheetsWriter]:
+    """The Sheet when it's configured and reachable, else None (probe still works offline)."""
+    if not sheets_configured():
+        return None
+    try:
+        return SheetsWriter.from_env()
+    except Exception as exc:  # a spot check shouldn't fail because the Sheet is unreachable
+        log.warning("Sheet not reachable (%s); probe cost logged locally only", type(exc).__name__)
+        return None
 
 
 def cmd_probe(args, settings) -> int:
@@ -305,7 +343,8 @@ def cmd_probe(args, settings) -> int:
     provider = make_provider(args, settings, budget, resolve_devices(args, settings)[0])
     result: SerpResult = provider.fetch_ai_overview(args.query)
     rate = (settings.get("cost_per_check_usd") or {}).get(provider.name)
-    record_cost("probe", [provider], 1, budget.used, None if rate is None else float(rate) * budget.used)
+    record_cost("probe", [provider], 1, budget.used, None if rate is None else float(rate) * budget.used,
+                store=_optional_sheet())
     if args.save:
         Path(args.save).write_text(json.dumps(result.raw, indent=2))
     m = match_citations(result, varsity_blogs())
