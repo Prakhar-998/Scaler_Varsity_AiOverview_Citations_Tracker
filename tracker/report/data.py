@@ -1,7 +1,7 @@
 """Build the dashboard's data from select and check outputs.
 
 Inputs are plain rows (dicts keyed by the CSV headers), so the same builder works for the runs/
-CSVs today and the Sheets tabs later. `load_runs` reads runs/; `build_report` is pure.
+CSVs and the Sheet's tabs. `load_runs` reads runs/, `load_sheet` reads the Sheet; `build_report` is pure.
 
 Definitions match the Summary tab (tracker/output/rows.py): failed checks are left out of every
 rate, incomplete AI Overviews count as shown but not in the citation rate.
@@ -85,6 +85,15 @@ def load_runs(runs: Path) -> RunInputs:
     if (runs / "active_prompts.json").exists():
         out.active = [p["prompt"] for p in json.loads((runs / "active_prompts.json").read_text())]
     return out
+
+
+def load_sheet(store) -> RunInputs:
+    """The Sheet's Prompts, Checks and Costs tabs. Every real check in the Sheet is tagged with its prompt
+    set (the migration backfilled older untagged runs), so no known sets are needed."""
+    prompts = store.read_prompts()
+    return RunInputs(prompts=prompts, prompts_from="the Sheet's Prompts tab" if prompts else "",
+                     checks=store.read_check_records(), costs=store.read_costs(),
+                     active=[r["prompt"] for r in prompts if r.get("status") == "active" and r.get("prompt")])
 
 
 def _pct(n: int, d: int) -> Optional[float]:
@@ -336,7 +345,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
     active = inputs.active or [r["prompt"] for r in active_rows]
     current = prompt_set_id(active) if active else ""
     known = set(inputs.known_sets) | {current} | ({prompt_set_id(r["prompt"] for r in active_rows)} if active_rows else set())
-    checks, real_checks, other_runs = _split_runs(inputs.checks, active, known)
+    checks, real_rows, other_runs = _split_runs(inputs.checks, active, known)
     latest = _latest_per_prompt(checks)
 
     def info(prompt: str) -> Dict:
@@ -430,7 +439,7 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
 
     # 7. trend: citation rate per check run (one timestamp per run, all devices), over the prompts that run checked
     by_run = defaultdict(list)
-    for r in real_checks:
+    for r in real_rows:
         by_run[_checked_at(r)].append(r)
     trend = [dict(_rates(rows), run=at, prompts=len({r["prompt"] for r in rows}))
              for at, rows in sorted(by_run.items()) if at]
@@ -449,4 +458,4 @@ def build_report(inputs: RunInputs, clusters: List[Cluster], blogs: List[Blog],
             "trend": trend, "other_runs": other_runs}
 
 
-__all__ = ["RunInputs", "load_runs", "build_report"]
+__all__ = ["RunInputs", "load_runs", "load_sheet", "build_report"]

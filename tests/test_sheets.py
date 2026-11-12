@@ -1,4 +1,5 @@
 """The Sheet as the store for real runs, with an in-memory stand-in for the gspread spreadsheet."""
+import json
 
 import gspread
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from tracker import cli
 from tracker.output import CHECK_HEADERS, PROMPT_HEADERS, SheetsWriter
 from tracker.prompts import prompt_set_id
+from tracker.report import load_sheet
 
 
 class FakeTab:
@@ -107,3 +109,20 @@ def test_blogs_come_from_the_sheet_when_the_file_is_missing(sheet):
     sheet.write_blogs([["FDE Fees", "fde fees", "https://www.interviewbit.com/varsity/blog/fde-fees/"]])
     assert [b.title for b in cli.varsity_blogs(sheet)] == ["FDE Fees"]
     assert cli.varsity_blogs(None) == []
+
+
+def test_report_reads_history_from_the_sheet(sheet, tmp_path):
+    sheet.write_prompts([prompt_row("best fde course")])
+    row = dict.fromkeys(CHECK_HEADERS, "")
+    row.update({"date": "2026-11-12", "time": "06:30", "prompt": "best fde course", "cluster": "fde",
+                "device": "desktop", "check status": "ok", "ai overview shown": "yes", "varsity cited": "yes",
+                "cited url": "https://www.interviewbit.com/varsity/blog/fde-fees/", "position": "2",
+                "prompt set": prompt_set_id(["best fde course"])})
+    sheet.append_checks([[row[h] for h in CHECK_HEADERS]])
+    inputs = load_sheet(sheet)
+    assert inputs.active == ["best fde course"] and len(inputs.checks) == 1
+    out = tmp_path / "index.html"
+    assert cli.main(["report", "--out", str(out)]) == 0
+    data = json.loads(out.read_text().split('type="application/json">', 1)[1].split("</script>", 1)[0]
+                      .replace("<\\/", "</"))
+    assert data["kpis"]["checks"] == 1 and len(data["wins"]) == 1
