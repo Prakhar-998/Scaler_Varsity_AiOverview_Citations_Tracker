@@ -23,9 +23,12 @@ blogs.csv + gsc.csv + config/programs.yaml
         ── writes the Prompts tab + runs/active_prompts.json
         │
         ▼
- check  ── one SERP call per active prompt (google.com, India, English, mobile)
+ check  ── one SERP call per active prompt in the Prompts tab (google.com, India, English, desktop)
         ── match references: Varsity cited? position? other brand pages? competitors?
         ── appends to the Checks tab, rebuilds the Summary tab
+        │      (Mon + Thu on GitHub Actions; the Sheet keeps the history)
+        ▼
+ report ── dashboard/index.html from the Sheet
 ```
 
 Run `check` twice a day at different times. Each check gets one status:
@@ -54,7 +57,8 @@ cp .env.example .env   # fill in keys; never commit .env
 | `GEMINI_API_KEY` | only if you turn Gemini on in `llm.chain` (off by default) |
 | `GEMINI_MODEL` | optional; overrides `gemini_model` in `config/settings.yaml` (default `gemini-3.8-flash`) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | path to the service account file, or the JSON itself |
-| `SHEET_ID` | the **test** sheet (share it with the service account email) |
+| `SHEET_ID` | the **test** sheet (share it with the service account email as Editor) |
+| `TRACKER_REDACT_LOGS` | optional; `1` names queries by a short hash in log lines instead of the prompt (set by the GitHub Actions workflow) |
 
 Inputs:
 - `blogs.csv` has the columns `title, primary_keyword, url`
@@ -150,7 +154,11 @@ before any probe SERP call. If a run stops, re-use them without drafting again:
 .venv/bin/python -m tracker check --prompts data/private/test_prompts.csv --dry-run --max-cost 0.05
 ```
 
-Without `--dry-run`, output goes to Google Sheets. With it, CSVs are written to `runs/dry-run-*/`.
+Without `--dry-run`, output goes to the Google Sheet, which keeps the history of real runs: `select`
+replaces the Prompts tab, and `check` runs the prompts it marks active and appends to Checks (see
+[Output](#output)). With `--dry-run`, `check` runs `runs/active_prompts.json` and CSVs are written
+to `runs/dry-run-*/`. `migrate` imports the existing `runs/` history into the Sheet once (see
+[SETUP.md](SETUP.md)).
 `--max-serp-calls` caps SERP calls per run (default in `config/settings.yaml`; retries count).
 `check --max-cost <usd>` exits with code 3 before any SERP call if the estimate is over the limit.
 Otherwise it becomes a hard cap that includes retries: $0.40 at $0.004 per call allows 100 calls,
@@ -160,12 +168,15 @@ skipped with a warning. The cost log's estimate counts every call made, retries 
 ## Dashboard
 
 ```bash
-.venv/bin/python -m tracker report            # dashboard/index.html from runs/
+.venv/bin/python -m tracker report            # dashboard/index.html from the Sheet
+.venv/bin/python -m tracker report --dry-run  # the same from runs/ (local CSVs)
 .venv/bin/python -m tracker report --sample   # dashboard/sample.html, fake data for screenshots
 ```
 
-`report` reads `runs/active_prompts.json`, the latest `prompts.csv`, every `checks.csv` under
-`runs/`, `runs/cost_log.csv`, and `data/private/blogs.csv` (to map gaps to a blog). History is
+`report` reads the Sheet's Prompts, Checks and Costs tabs, and `data/private/blogs.csv` (to map
+gaps to a blog; the Sheet's Blogs tab when the file isn't there). Without Sheet credentials, or with
+`--dry-run` / `--runs DIR`, it reads `runs/active_prompts.json`, the latest `prompts.csv`, every
+`checks.csv` under `runs/` and `runs/cost_log.csv` instead. History is
 **per prompt**: every number except spend and the trend uses the checks of prompts that are active
 now, from every real run, so adding or removing prompts never discards the history of the prompts
 that stay. Each check row records the set it ran on (`prompt set`). Test runs (`check --prompts`,
@@ -218,9 +229,20 @@ the generator (`tracker/report/`) is committed. The `--sample` data is invented:
 domains use the reserved `.example` TLD.
 
 Every `check`, `probe` and `select` run appends a row to `runs/cost_log.csv` (provider, devices,
-checks, SERP calls, estimated and billed USD). DataForSEO reports what it billed for each call.
+checks, SERP calls, estimated and billed USD), and to the Sheet's Costs tab for real runs (and for
+`probe` when the Sheet is configured). DataForSEO reports what it billed for each call.
 
-## Scheduled daily run
+## Scheduled checks on GitHub Actions
+
+`.github/workflows/check.yml` runs `check` (DataForSEO, desktop, `--max-cost 0.40`) on the Sheet's
+active set every Monday and Thursday at about 06:30 IST, and on demand (**Actions → check → Run
+workflow**), then builds the dashboard from the Sheet. The offline tests run first, so a broken
+build fails before any paid call. A run fails visibly when a step fails, including `check` exit
+code 5 (every check failed). Prompt text is hashed in log lines and no SERP response is printed.
+The dashboard is uploaded as a 30-day artifact only when the repository is private, because it
+holds company data. One-time setup (the Sheet, sharing, secrets, migration): [SETUP.md](SETUP.md).
+
+## Scheduled daily run (local)
 
 `scripts/daily_run.sh` runs `select --source both` (SERPHouse probes) and then, only if at least
 10 prompts are active, `check` on DataForSEO, as dry runs.
@@ -288,10 +310,15 @@ pmset -g sched                          # confirm; cancel with: sudo pmset sched
 
 ## Output
 
+The Google Sheet is the store for real runs; `--dry-run` writes the same tables as CSVs under
+`runs/dry-run-*/`. Values are written raw, so dates, times and prompts come back unchanged.
+
 | Tab | Columns |
 |---|---|
 | Prompts | prompt, cluster, source (gsc/llm), brand tag (competitor / brand_comparison), intent, score, status (active/dropped), reason, source inputs |
 | Checks | date, time, prompt, cluster, device, ai overview shown, varsity cited, cited url, position, brand cited, organic rank, rank match (`url` = exact Varsity URL, `domain` = only interviewbit.com was visible), competing domains, check status, error, prompt set, brand url, brand position (first other interviewbit.com / scaler.com page cited), our pages (every Varsity / InterviewBit / Scaler page cited: `#2 url \| #4 [title] url \| #6 [label] Scaler page (URL hidden)`), varsity match (`url`, or `title` when a hidden link was matched to the blog by title) |
+| Costs | one row per paid run: date, time, command, provider, devices, checks, serp calls, estimated usd, billed usd |
+| Blogs | title, primary_keyword, url (from `migrate`); used when `data/private/blogs.csv` isn't there, e.g. on GitHub Actions |
 | Summary | per cluster and device, ALL per device, and ALL / ALL when more than one device ran: checks, ok, incomplete, no_aio, failed, AI Overview presence %, Varsity citation rate %, incomplete rate %, brand citation rate % (other InterviewBit and Scaler pages), any page citation rate % (Varsity blog or another InterviewBit page) |
 
 Sample `Checks` rows, built from the real DataForSEO and SERPHouse fixtures:
@@ -328,5 +355,6 @@ tracker/output/   row building, summary, Sheets and CSV writers
 tracker/config/   YAML + CSV loaders
 tracker/report/   dashboard data builder, HTML template, sample data
 config/           programs.yaml (clusters), settings.yaml
+.github/workflows/ check.yml: scheduled checks on GitHub Actions (setup in SETUP.md)
 docs/decisions.md key choices and why
 ```

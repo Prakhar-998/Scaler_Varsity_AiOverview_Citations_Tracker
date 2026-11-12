@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- GitHub Actions workflow `.github/workflows/check.yml`: Mon and Thu at 06:30 IST, plus manual
+  runs. It runs the offline tests, then `check` (DataForSEO, desktop, `--max-cost 0.40`) and
+  `report` against the Sheet, in IST. The dashboard is uploaded as a 30-day artifact only when the
+  repository is private. One-time setup is in `SETUP.md`.
+- The Google Sheet stores real runs. New tabs: **Costs** (one row per paid run) and **Blogs** (for
+  title matching and gap mapping without `data/private/`).
+- `migrate`: a one-time import of `runs/` into the Sheet.
+  - Imports the active set, every check of a real run, the cost log and the blogs file.
+  - Test runs are left out, and older untagged runs are tagged with the set they checked.
+  - Safe to re-run; `--dry-run` only logs the counts.
+- `TRACKER_REDACT_LOGS=1` names queries by a short hash in log lines (set by the workflow).
 - Hidden `google.com/goto` references labelled InterviewBit or Scaler count as our pages (match
   type `label`, "… page (URL hidden)"); a hidden InterviewBit link whose title matches a Varsity
   blog title counts as that blog (match type `title`) with the blog URL recorded. New Checks
@@ -96,6 +107,11 @@
 - Offline test suite.
 
 ### Changed
+- `check` without `--dry-run` runs the prompts the Sheet's Prompts tab marks active, not
+  `runs/active_prompts.json`.
+- `report` reads its history from the Sheet. `--dry-run` or `--runs DIR` reads `runs/`, and so
+  does a run without Sheet credentials (with a warning).
+- `check` exits with code 5 when no check succeeded. The rows are still written.
 - The "Varsity / InterviewBit cited — any page" KPI, cluster rates, prompts table and Summary
   `any page citation rate %` count the Varsity blog and other InterviewBit pages only. Scaler
   pages have their own section. Old checks that didn't record which brand page was cited no
@@ -131,6 +147,8 @@
 - AI Overview presence % now counts incomplete AI Overviews as detected.
 
 ### Fixed
+- Sheet values are written RAW. Checks were appended as USER_ENTERED, so Sheets could turn dates and
+  times into its own date format, or a prompt starting with `=` into a formula.
 - Dashboard: past checks match active prompts by normalised text (case, spaces, trailing
   punctuation), so the pilot run's "...forward deployed engineering." check now counts.
 - DataForSEO tasks that fail with a transient status (40101 "Internal SE Server Error", 5xxxx) are

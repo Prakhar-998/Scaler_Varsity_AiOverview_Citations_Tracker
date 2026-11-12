@@ -445,3 +445,38 @@ count. The Summary's `any page citation rate %` follows the same definition.
 before hidden links were counted, so the dashboard won't show that run's hidden Scaler link.
 Re-matching a run from its saved raw responses would be a separate, explicit step.
 
+
+## The Sheet is the store; checks run on GitHub Actions (2026-11-12)
+
+**Why the Sheet.** A GitHub Actions runner starts empty, so history can't live in `runs/`. The
+Sheet was already the planned output, so it becomes the store:
+- **Prompts:** `status = active` is the set `check` runs.
+- **Checks:** appended every run.
+- **Costs:** so spend survives the runner.
+- **Blogs:** title matching and gap mapping need the blog list, and `data/private/` isn't on the
+  runner. Blog titles and URLs are public anyway.
+
+`report` reads the same rows it read from CSVs, so `build_report` didn't change. `--dry-run` still
+writes and reads local CSVs. Values are written RAW: USER_ENTERED let Sheets reformat dates and
+times, which would break run grouping, and could turn a prompt into a formula.
+
+**Migration tags old runs.** The dashboard counts an untagged old run only if it checked a set some
+`select` produced, which needs every `prompts.csv` under `runs/`. Instead of copying those files to
+the Sheet, `migrate` tags each untagged real run with the id of the set it checked. Every real
+check in the Sheet then carries its set, and test runs (`file:` tags, or untagged lists no
+`select` produced) are simply not imported. On 2026-11-12 that was 200 real checks from 5 runs,
+with 15 checks from 3 test runs left out.
+
+**Public repository, private data.** The repo is public, so its Actions logs are public. Retry
+log lines used to name the prompt, so the workflow sets `TRACKER_REDACT_LOGS=1` and they show a
+short hash instead. SERP responses are never logged.
+
+Artifacts of a public repository can be downloaded by any signed-in GitHub user, and the dashboard
+embeds GSC queries and results. So it is uploaded only when the repository is private, and the run
+warns otherwise. A passphrase-encrypted artifact would also work, but it adds a decrypt step every
+time.
+
+**Failing loudly.** `check` exited 0 even when every check failed (a bad login, a provider outage).
+The scheduled run would have looked green, so it now exits 5. The failed rows are still written,
+so the error column shows why. The offline tests run before `check` because CI uses Python 3.12
+and local development uses 3.9: an incompatibility should fail before any paid call.
